@@ -87,19 +87,7 @@ export default function Home() {
         ))}
       </div>
 
-      <div className="mt-16 text-center">
-        <h2 className="text-2xl font-bold mb-4">Getting Started</h2>
-        <div className="max-w-2xl mx-auto">
-          <p className="mb-4">
-            To use the Arabia Talents YouTube Toolkit, you need a YouTube Data API key. 
-            Click the "Set API Key" button in the header to enter your API key.
-          </p>
-          <p className="text-muted-foreground">
-            All tools support bulk input and follow Arabia Talents branding with light blue & white theme.
-            Dark mode is also available via the toggle in the header.
-          </p>
-        </div>
-      </div>
+    
     </div>
   );
 }
