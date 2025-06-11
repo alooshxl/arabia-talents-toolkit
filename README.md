@@ -34,15 +34,6 @@ npm install --legacy-peer-deps
 npm run dev
 ```
 
-### Project Structure (Simplified)
-```bash
-src/
-├── App.tsx
-├── index.tsx
-├── components/
-├── services/
-├── styles/
-```
 
 📄 License
-This project is provided for internal use and demo purposes.
+This project is provided for internal use.
