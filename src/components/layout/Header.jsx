@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useAppContext } from '@/contexts/AppContext';
-import { Moon, Sun, Key, Home } from 'lucide-react';
+import { Key, Home } from 'lucide-react';
+import { ThemeSwitcher } from '@/components/ui/ThemeSwitcher';
 
 export default function Header() {
-  const { apiKey, updateApiKey, darkMode, toggleDarkMode } = useAppContext();
+  const { apiKey, updateApiKey } = useAppContext(); // currentTheme and changeTheme are used by ThemeSwitcher
   const [tempApiKey, setTempApiKey] = useState(apiKey);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -62,9 +63,7 @@ export default function Header() {
             </DialogContent>
           </Dialog>
 
-          <Button variant="outline" size="sm" onClick={toggleDarkMode}>
-            {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </Button>
+          <ThemeSwitcher />
         </div>
       </div>
     </header>
