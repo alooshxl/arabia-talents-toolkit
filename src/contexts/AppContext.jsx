@@ -14,8 +14,8 @@ export const AppProvider = ({ children }) => {
   const [apiKey, setApiKey] = useState(localStorage.getItem('youtube-api-key') || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [darkMode, setDarkMode] = useState(
-    localStorage.getItem('dark-mode') === 'true' || false
+  const [currentTheme, setCurrentTheme] = useState(
+    localStorage.getItem('theme') || 'light'
   );
 
   const updateApiKey = (key) => {
@@ -23,23 +23,24 @@ export const AppProvider = ({ children }) => {
     localStorage.setItem('youtube-api-key', key);
   };
 
-  const toggleDarkMode = () => {
-    const newMode = !darkMode;
-    setDarkMode(newMode);
-    localStorage.setItem('dark-mode', newMode.toString());
-    
-    // Update document class for dark mode
-    if (newMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+  const changeTheme = (themeName) => {
+    setCurrentTheme(themeName);
+    localStorage.setItem('theme', themeName);
+
+    // Update document class for the new theme
+    const htmlElement = document.documentElement;
+    htmlElement.classList.remove('dark', 'blue', 'green'); // Remove all possible theme classes
+    if (themeName !== 'light') {
+      htmlElement.classList.add(themeName);
     }
   };
 
-  // Initialize dark mode on load
+  // Initialize theme on load
   useState(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    setCurrentTheme(savedTheme);
+    if (savedTheme !== 'light') {
+      document.documentElement.classList.add(savedTheme);
     }
   }, []);
 
@@ -50,8 +51,8 @@ export const AppProvider = ({ children }) => {
     setLoading,
     error,
     setError,
-    darkMode,
-    toggleDarkMode
+    currentTheme,
+    changeTheme
   };
 
   return (
