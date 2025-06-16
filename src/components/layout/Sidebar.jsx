@@ -5,7 +5,8 @@ import {
   Database, 
   Film, 
   Search, 
-  Activity
+  Activity,
+  MessageSquareText // Icon for comment mapping
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -42,6 +43,11 @@ export default function Sidebar() {
       name: 'Trending Checker',
       path: '/tools/trending-checker',
       icon: <Activity size={20} />
+    },
+    {
+      name: 'Arabia Comment Mapper',
+      path: '/tools/arabia-comment-mapper',
+      icon: <MessageSquareText size={20} />
     }
   ];
 
