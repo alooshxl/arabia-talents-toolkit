@@ -49,14 +49,23 @@ const ArabiaCommentMapper = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const [processedResults, setProcessedResults] = useState(null);
+  const [processedResults, setProcessedResults] = useState({
+    youtubeApiAnalysis: null,
+    geminiApiAnalysis: null,
+    commonTitle: 'All Videos'
+  });
   const [selectedVideoFilter, setSelectedVideoFilter] = useState('all');
 
   const handleAnalyzeClick = useCallback(async () => {
     setIsLoading(true);
     setError('');
     setCommentsData([]);
-    setProcessedResults(null);
+    // Reset to initial dual structure
+    setProcessedResults({
+      youtubeApiAnalysis: null,
+      geminiApiAnalysis: null,
+      commonTitle: selectedVideoFilter === 'all' ? 'All Videos' : (commentsData.find(v => v.videoId === selectedVideoFilter)?.title || 'Selected Video')
+    });
 
     let currentError = '';
     if (!geminiApiKey.trim()) {
@@ -127,7 +136,8 @@ const ArabiaCommentMapper = () => {
             }
 
             let geminiCountry = null;
-            if (!youtubeCountry && geminiApiKey.trim() && comment.text && comment.text.trim() !== '') {
+            // Condition changed: removed !youtubeCountry
+            if (geminiApiKey.trim() && comment.text && comment.text.trim() !== '') {
               const prompt = `Analyze the following Arabic comment and determine the most likely country of origin of the commenter from this list: [${targetArabCountriesList.join(', ')}]. Focus on dialect, slang, and specific expressions. Return only the country name from the list, or 'Unknown' if uncertain. Comment: '${comment.text}'`;
               try {
                 const geminiResult = await geminiApiService.generateContent(geminiApiKey, prompt);
@@ -146,6 +156,9 @@ const ArabiaCommentMapper = () => {
                     currentError += `Error with Gemini API occurred for some comments. Check console. `;
                 }
               }
+            } else if (!geminiApiKey.trim() && comment.text && comment.text.trim() !== '') {
+              // If API key is missing, but we would have called Gemini, explicitly set geminiCountry to null or a specific marker
+              geminiCountry = null; // Or 'API Key Missing'
             }
             processedCommentsContent.push({
               text: comment.text,
@@ -171,126 +184,262 @@ const ArabiaCommentMapper = () => {
   }, [videoUrls, geminiApiKey]);
 
   const processAndAggregateData = useCallback((currentData, filterId) => {
-    if (!currentData || currentData.length === 0) return null;
+    const emptyAnalysisResult = {
+      chartData: [],
+      rankedList: [],
+      exampleCommentsByCountry: {},
+      totalAnalyzedComments: 0,
+      totalIdentifiedArabCountries: 0,
+      unknownOrNonArabPercentage: 0,
+    };
 
     let commentsToProcess = [];
-    let currentTitle = "All Videos"; // Default title
+    let currentTitle = "All Videos";
     if (filterId === 'all') {
       currentData.forEach(video => commentsToProcess.push(...video.comments));
     } else {
       const selectedVideo = currentData.find(video => video.videoId === filterId);
       if (selectedVideo) {
         commentsToProcess = selectedVideo.comments;
-        currentTitle = selectedVideo.title; // Use the actual video title
+        currentTitle = selectedVideo.title;
       }
     }
 
-    if (commentsToProcess.length === 0) return {
-        title: currentTitle, chartData: [], rankedList: [], exampleCommentsByCountry: {},
-        totalAnalyzedComments: 0, totalIdentifiedArabCountries: 0,
-        unknownOrNonArabPercentage: 0
+    if (commentsToProcess.length === 0) {
+      return {
+        commonTitle: currentTitle,
+        youtubeApiAnalysis: { ...emptyAnalysisResult, title: currentTitle },
+        geminiApiAnalysis: { ...emptyAnalysisResult, title: currentTitle },
+      };
+    }
+
+    const performSingleAggregation = (comments, countryFieldName) => {
+      const countryCounts = {};
+      targetArabCountriesList.forEach(country => countryCounts[country] = 0);
+      let unknownOrNonArabCount = 0;
+      let identifiedArabCount = 0;
+      let processedCommentCountForSource = 0; // Comments that had a value for this source
+
+      comments.forEach(comment => {
+        let sourceCountry = comment[countryFieldName];
+        if (sourceCountry === undefined || sourceCountry === null || sourceCountry === 'Error (Gemini)') {
+          // If error from Gemini, or no data from source, it's not counted in this source's "analyzed" total for identified Arab countries
+          // but might be counted in overall "unknown" if no other source provides data.
+          // For this specific aggregation, we only care about comments this source *could* identify.
+          if (sourceCountry === 'Error (Gemini)') unknownOrNonArabCount++; // Count errors specifically if needed
+          return; // Skip if no data from this source or it's an error state we exclude from positive ID
+        }
+        processedCommentCountForSource++;
+
+
+        if (sourceCountry && sourceCountry.length === 2) { // Normalize country code
+          const countryEntry = Object.entries(countryDetails).find(([name, details]) => details.code === sourceCountry.toUpperCase());
+          if (countryEntry) sourceCountry = countryEntry[0];
+        }
+
+        if (sourceCountry && targetArabCountriesList.includes(sourceCountry)) {
+          countryCounts[sourceCountry]++;
+          identifiedArabCount++;
+        } else {
+          // Includes 'Unknown', 'Unknown (Non-standard)', or non-target countries
+          unknownOrNonArabCount++;
+        }
+      });
+
+      // Base percentages on comments that had a value for this source, or all comments if that's preferred.
+      // Using processedCommentCountForSource makes percentages relative to comments processed by *this* source.
+      const totalCommentsForPercentageCalc = processedCommentCountForSource;
+
+      const sortedArabCountries = Object.entries(countryCounts)
+        .filter(([name, count]) => count > 0)
+        .sort(([, aCount], [, bCount]) => bCount - aCount);
+
+      const rankedList = sortedArabCountries.map(([name, count]) => ({
+        name,
+        count,
+        percentage: totalCommentsForPercentageCalc > 0 ? parseFloat(((count / totalCommentsForPercentageCalc) * 100).toFixed(1)) : 0,
+        flag: getCountryFlag(name)
+      }));
+
+      const topFourForChart = rankedList.slice(0, 4);
+      const otherArabCount = sortedArabCountries.slice(4).reduce((sum, [, count]) => sum + count, 0);
+
+      let chartDataPayload = topFourForChart.map(c => ({
+          name: c.name,
+          value: c.percentage
+      }));
+
+      if (otherArabCount > 0) {
+        chartDataPayload.push({
+          name: 'Other Arab Countries',
+          value: totalCommentsForPercentageCalc > 0 ? parseFloat(((otherArabCount / totalCommentsForPercentageCalc) * 100).toFixed(1)) : 0
+        });
+      }
+
+      const unknownOrNonArabPercentageVal = totalCommentsForPercentageCalc > 0 ? parseFloat(((unknownOrNonArabCount / totalCommentsForPercentageCalc) * 100).toFixed(1)) : 0;
+      if (unknownOrNonArabPercentageVal > 0 || (chartDataPayload.length === 0 && totalCommentsForPercentageCalc > 0) ) {
+          chartDataPayload.push({ name: 'Unknown/Error', value: unknownOrNonArabPercentageVal });
+      }
+
+      chartDataPayload = chartDataPayload
+        .map(item => ({
+          ...item,
+          displayName: `${getCountryFlag(item.name)} ${item.name}`,
+        }))
+        .sort((a,b) => b.value - a.value);
+
+      const exampleCommentsByCountry = {};
+      topFourForChart.forEach(country => {
+        exampleCommentsByCountry[country.name] = comments
+          .filter(comment => {
+              let finalC = comment[countryFieldName];
+              if (finalC && finalC.length === 2) {
+                  const cEntry = Object.entries(countryDetails).find(([n, d]) => d.code === finalC.toUpperCase());
+                  if (cEntry) finalC = cEntry[0];
+              }
+              return finalC === country.name;
+          })
+          .slice(0, 2)
+          .map(comment => comment.text);
+      });
+
+      return {
+        title: currentTitle, // Title here is more for consistency if used directly
+        chartData: chartDataPayload,
+        rankedList,
+        exampleCommentsByCountry,
+        totalAnalyzedComments: processedCommentCountForSource, // Total comments processed by this source
+        totalIdentifiedArabCountries: identifiedArabCount,
+        unknownOrNonArabPercentage: unknownOrNonArabPercentageVal
+      };
     };
 
-    const countryCounts = {};
-    targetArabCountriesList.forEach(country => countryCounts[country] = 0);
-    let unknownOrNonArabCount = 0; // Includes Gemini errors, non-standard, truly unknown, non-Arab countries
-    let identifiedArabCount = 0;
-
-    commentsToProcess.forEach(comment => {
-      let finalCountry = comment.youtubeCountry || comment.geminiCountry;
-      // Basic normalization: if country code (e.g., 'SA'), map to full name.
-      // This is a simple example; a more robust solution might be needed for all country codes.
-      if (finalCountry && finalCountry.length === 2) {
-          const countryEntry = Object.entries(countryDetails).find(([name, details]) => details.code === finalCountry.toUpperCase());
-          if (countryEntry) finalCountry = countryEntry[0];
-      }
-
-      if (finalCountry && targetArabCountriesList.includes(finalCountry)) {
-        countryCounts[finalCountry]++;
-        identifiedArabCount++;
-      } else {
-        unknownOrNonArabCount++;
-      }
-    });
-
-    const totalAnalyzedComments = commentsToProcess.length;
-
-    const sortedArabCountries = Object.entries(countryCounts)
-      .filter(([name, count]) => count > 0) // Only countries with counts
-      .sort(([, aCount], [, bCount]) => bCount - aCount);
-
-    const rankedList = sortedArabCountries.map(([name, count]) => ({
-      name,
-      count,
-      percentage: totalAnalyzedComments > 0 ? parseFloat(((count / totalAnalyzedComments) * 100).toFixed(1)) : 0,
-      flag: getCountryFlag(name)
-    }));
-
-    const topFourForChart = rankedList.slice(0, 4);
-    const otherArabCount = sortedArabCountries.slice(4).reduce((sum, [, count]) => sum + count, 0);
-
-    let chartDataPayload = topFourForChart.map(c => ({
-        name: c.name,
-        value: c.percentage
-    }));
-
-    if (otherArabCount > 0) {
-      chartDataPayload.push({
-        name: 'Other Arab Countries',
-        value: totalAnalyzedComments > 0 ? parseFloat(((otherArabCount / totalAnalyzedComments) * 100).toFixed(1)) : 0
-      });
-    }
-
-    const unknownOrNonArabPercentageVal = totalAnalyzedComments > 0 ? parseFloat(((unknownOrNonArabCount / totalAnalyzedComments) * 100).toFixed(1)) : 0;
-    // Ensure "Unknown/Error" is added only if it has a value or if there's no other data to show
-    if (unknownOrNonArabPercentageVal > 0 || chartDataPayload.length === 0 && totalAnalyzedComments > 0) {
-        chartDataPayload.push({ name: 'Unknown/Error', value: unknownOrNonArabPercentageVal });
-    }
-
-    // Add flags for chart labels, sort by value for consistent chart display
-    chartDataPayload = chartDataPayload
-      .map(item => ({
-        ...item,
-        displayName: `${getCountryFlag(item.name)} ${item.name}`,
-      }))
-      .sort((a,b) => b.value - a.value); // Sort by percentage descending for chart
-
-
-    const exampleCommentsByCountry = {};
-    // Use topFourForChart which contains the top Arab countries identified
-    topFourForChart.forEach(country => {
-      exampleCommentsByCountry[country.name] = commentsToProcess
-        .filter(comment => {
-            let finalC = comment.youtubeCountry || comment.geminiCountry;
-            if (finalC && finalC.length === 2) { // Normalize from code if necessary
-                const cEntry = Object.entries(countryDetails).find(([n, d]) => d.code === finalC.toUpperCase());
-                if (cEntry) finalC = cEntry[0];
-            }
-            return finalC === country.name;
-        })
-        .slice(0, 2) // Max 2 examples
-        .map(comment => comment.text);
-    });
+    const youtubeApiAnalysis = performSingleAggregation(commentsToProcess, 'youtubeCountry');
+    const geminiApiAnalysis = performSingleAggregation(commentsToProcess, 'geminiCountry');
 
     return {
-      title: currentTitle, // Pass the title for the results section
-      chartData: chartDataPayload,
-      rankedList,
-      exampleCommentsByCountry,
-      totalAnalyzedComments,
-      totalIdentifiedArabCountries: identifiedArabCount,
-      unknownOrNonArabPercentage: unknownOrNonArabPercentageVal
+      commonTitle: currentTitle,
+      youtubeApiAnalysis,
+      geminiApiAnalysis
     };
   }, []);
 
   useEffect(() => {
     if (commentsData && commentsData.length > 0) {
       const results = processAndAggregateData(commentsData, selectedVideoFilter);
-      setProcessedResults(results);
+      // This will need to be updated in the next step to return the dual structure
+      // For now, to avoid breaking the UI, we'll assume it returns the old structure
+      // or we temporarily adapt. Let's assume processAndAggregateData is not yet changed.
+      // To prevent immediate errors, we'll have to temporarily assign to one part or adapt UI.
+      // For this step, the main goal is state structure change.
+      // The UI will temporarily break until processAndAggregateData and UI rendering are updated.
+      setProcessedResults(results); // This line will be the source of an error until next step.
     } else {
-      setProcessedResults(null);
+      setProcessedResults({ youtubeApiAnalysis: null, geminiApiAnalysis: null, commonTitle: 'All Videos' });
     }
-  }, [commentsData, selectedVideoFilter, processAndAggregateData]);
+  }, [commentsData, selectedVideoFilter, processAndAggregateData]); // processAndAggregateData will also change
+
+// Internal component to display a single set of analysis results
+const AnalysisResultBlock = ({ analysisName, analysisData }) => {
+  if (!analysisData || analysisData.totalAnalyzedComments === 0 && analysisData.totalIdentifiedArabCountries === 0) {
+    return (
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle className="text-xl">{analysisName}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-center text-muted-foreground py-4">No data available or processed for this analysis source.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="mt-4 shadow-lg">
+      <CardHeader>
+        <CardTitle className="text-xl mb-2">{analysisName}</CardTitle>
+        <CardDescription className="text-sm">
+          Analyzed {analysisData.totalAnalyzedComments} comments for this source.
+          Identified {analysisData.totalIdentifiedArabCountries} comments from target Arab countries.
+          Unknown/Other from this source: {analysisData.unknownOrNonArabPercentage?.toFixed(1)}%
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {analysisData.chartData && analysisData.chartData.length > 0 && analysisData.chartData.some(d => d.value > 0) ? (
+          <Card>
+            <CardHeader><CardTitle className="text-lg text-center">Comment Origin Distribution (%)</CardTitle></CardHeader>
+            <CardContent className="h-[400px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={analysisData.chartData} margin={{ top: 5, right: 20, left: 0, bottom: 110 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="displayName"
+                    angle={-60}
+                    textAnchor="end"
+                    interval={0}
+                    height={100}
+                    tick={{ fontSize: 12 }}
+                  />
+                  <YAxis domain={[0, 100]} label={{ value: 'Percentage (%)', angle: -90, position: 'insideLeft' }} />
+                  <Tooltip formatter={(value) => [`${value.toFixed(1)}%`, "Percentage"]} />
+                  <Bar dataKey="value" name="Percentage" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        ) : (
+          <p className="text-center text-muted-foreground py-4">No chart data to display for {analysisName}. (All values might be 0% or no data processed).</p>
+        )}
+
+        {analysisData.rankedList && analysisData.rankedList.length > 0 ? (
+          <Card>
+            <CardHeader><CardTitle className="text-lg text-center">Ranked List of Identified Arab Countries</CardTitle></CardHeader>
+            <CardContent>
+              <ul className="space-y-2 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+                {analysisData.rankedList.map(country => (
+                  <li key={country.name} className="flex justify-between items-center p-3 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-md shadow-sm">
+                    <span className="flex items-center"><span className="text-xl mr-2">{country.flag}</span> {country.name}</span>
+                    <span className="font-semibold text-sm">{country.percentage}% <span className="text-xs text-muted-foreground">({country.count})</span></span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        ) : (
+           <p className="text-center text-muted-foreground py-4">No countries identified or ranked for {analysisName}.</p>
+        )}
+
+        {analysisData.exampleCommentsByCountry && Object.values(analysisData.exampleCommentsByCountry).some(arr => arr.length > 0) ? (
+          <Card>
+            <CardHeader><CardTitle className="text-lg text-center">Example Comments by Top Countries</CardTitle></CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Object.entries(analysisData.exampleCommentsByCountry).map(([country, comments]) => (
+                  comments.length > 0 && (
+                    <Card key={country} className="bg-white dark:bg-slate-800 shadow-lg">
+                      <CardHeader className="pb-2 pt-4">
+                        <CardTitle className="text-md flex items-center"><span className="text-xl mr-2">{getCountryFlag(country)}</span>{country}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        {comments.map((comment, index) => (
+                          <blockquote key={index} className="text-sm text-slate-600 dark:text-slate-300 border-l-4 border-primary pl-3 py-1 italic bg-slate-50 dark:bg-slate-700/50 rounded-r-md">
+                            "{comment.length > 150 ? comment.substring(0, 150) + '...' : comment}"
+                          </blockquote>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  )
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <p className="text-center text-muted-foreground py-4">No example comments to display for {analysisName}.</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
 
   return (
     <Card className="w-full max-w-4xl mx-auto my-8">
@@ -347,60 +496,86 @@ const ArabiaCommentMapper = () => {
 
         {/* Error display, Results Filter, Placeholders, and Raw Data sections are siblings
             to the Configuration Card, within the main page's CardContent (L289) */}
+
         {error && (
-            <div className="text-red-500 text-sm p-2 bg-red-100 border border-red-400 rounded-md">
-              <p>Error: {error}</p>
-            </div>
-          )}
+          <Card className="border-red-500 bg-red-50 dark:bg-red-900/30 dark:border-red-700">
+            <CardHeader>
+              <CardTitle className="text-red-700 dark:text-red-400 text-lg">Error Log</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-red-600 dark:text-red-300 whitespace-pre-wrap">{error}</p>
+            </CardContent>
+          </Card>
+        )}
 
-          <div className="pt-4">
-            <h3 className="text-lg font-semibold mb-2 text-center">Results Filter</h3>
-            <Select disabled={isLoading || commentsData.length === 0}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Filter by video (All Videos)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Videos</SelectItem>
-                {/* Placeholder for specific video options - will be populated dynamically */}
-                {commentsData.map(videoData => (
-                  <SelectItem key={videoData.videoId} value={videoData.videoId}>
-                    {videoData.videoId} {/* Replace with actual video title if fetched */}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Main Results Card - updated to hold two analysis blocks */}
+        {processedResults && (processedResults.youtubeApiAnalysis || processedResults.geminiApiAnalysis) && !isLoading && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="text-2xl text-center mb-4">
+                Analysis Results for: <span className="text-primary">{processedResults.commonTitle}</span>
+              </CardTitle>
+              <div className="flex items-center space-x-4 pt-3 justify-center">
+                <label htmlFor="videoFilter" className="text-sm font-medium">Filter by Video:</label>
+                <Select
+                  value={selectedVideoFilter}
+                  onValueChange={setSelectedVideoFilter}
+                  disabled={!commentsData || commentsData.length === 0}
+                >
+                  <SelectTrigger className="w-auto min-w-[200px] max-w-[300px]">
+                    <SelectValue placeholder="Select video" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Videos</SelectItem>
+                    {commentsData.map(videoData => (
+                      <SelectItem key={videoData.videoId} value={videoData.videoId}>
+                        {videoData.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              {/* YouTube API Analysis Block */}
+              {processedResults.youtubeApiAnalysis && (
+                <AnalysisResultBlock
+                  analysisName="Based on YouTube Channel Data (youtubeCountry)"
+                  analysisData={processedResults.youtubeApiAnalysis}
+                />
+              )}
 
-          <div className="pt-4">
-            <h3 className="text-lg font-semibold mb-2 text-center">Comment Distribution Chart</h3>
-            <div className="border rounded-md min-h-[200px] flex items-center justify-center text-gray-400">
-              [Chart Placeholder]
-            </div>
-          </div>
+              {/* Gemini API Analysis Block */}
+              {geminiApiKey.trim() && processedResults.geminiApiAnalysis && (
+                 <AnalysisResultBlock
+                  analysisName="Based on Gemini Comment Analysis (geminiCountry)"
+                  analysisData={processedResults.geminiApiAnalysis}
+                />
+              )}
+              {!geminiApiKey.trim() && (
+                <Card className="mt-4"><CardHeader><CardTitle className="text-xl">Gemini Comment Analysis</CardTitle></CardHeader><CardContent><p className="text-muted-foreground text-center py-4">Gemini API key not provided. This analysis was skipped.</p></CardContent></Card>
+              )}
 
-          <div className="pt-4">
-            <h3 className="text-lg font-semibold mb-2 text-center">Ranked List of Countries</h3>
-            <div className="border rounded-md min-h-[150px] flex items-center justify-center text-gray-400">
-              [Ranked List Placeholder]
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+        )}
 
-          <div className="pt-4">
-            <h3 className="text-lg font-semibold mb-2 text-center">Example Comments</h3>
-            <div className="border rounded-md min-h-[150px] flex items-center justify-center text-gray-400">
-              [Example Comments Placeholder]
-            </div>
-          </div>
-
-          {commentsData.length > 0 && (
-            <div className="pt-4">
-              <h3 className="text-lg font-semibold mb-2 text-center">Raw Data Verification</h3>
-              <pre className="bg-gray-100 p-4 rounded-md text-xs overflow-auto max-h-[300px]">
-                {JSON.stringify(commentsData, null, 2)}
-              </pre>
-            </div>
-          )}
-      {/* Main CardContent (L289) and main Card (L285) are correctly closed here from previous step */}
+        {commentsData.length > 0 && !isLoading && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="text-xl">Raw Data Verification</CardTitle>
+              <CardDescription>Inspect the fetched and processed data for debugging.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                readOnly
+                value={JSON.stringify(commentsData, null, 2)}
+                className="min-h-[200px] text-xs bg-slate-100 dark:bg-slate-800 dark:text-slate-300"
+                placeholder="Raw JSON data of comments..."
+              />
+            </CardContent>
+          </Card>
+        )}
       </CardContent>
     </Card>
   );
