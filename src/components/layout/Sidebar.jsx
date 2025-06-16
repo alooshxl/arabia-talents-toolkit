@@ -5,7 +5,8 @@ import {
   Database, 
   Film, 
   Search, 
-  Activity
+  Activity,
+  Sparkles // Added for the new tool
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -42,6 +43,11 @@ export default function Sidebar() {
       name: 'Trending Checker',
       path: '/tools/trending-checker',
       icon: <Activity size={20} />
+    },
+    {
+      name: 'AI Video Summarizer',
+      path: '/tools/video-summarizer',
+      icon: <Sparkles size={20} />
     }
   ];
 
