@@ -6,7 +6,8 @@ import {
   Film, 
   Search, 
   Activity,
-  ArrowRight
+  ArrowRight,
+  Sparkles // Add new icon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -54,6 +55,13 @@ export default function Home() {
       icon: <Activity size={24} />,
       path: '/tools/trending-checker',
       color: 'bg-pink-100 dark:bg-pink-900'
+    },
+    {
+      title: 'AI Video Summarizer',
+      description: 'Get AI-powered summaries and key topics for any YouTube video.',
+      icon: <Sparkles size={24} />,
+      path: '/tools/video-summarizer',
+      color: 'bg-teal-100 dark:bg-teal-900'
     }
   ];
 

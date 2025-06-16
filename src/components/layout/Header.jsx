@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,12 +8,23 @@ import { Key, Home } from 'lucide-react';
 import { ThemeSwitcher } from '@/components/ui/ThemeSwitcher';
 
 export default function Header() {
-  const { apiKey, updateApiKey } = useAppContext(); // currentTheme and changeTheme are used by ThemeSwitcher
+  const { apiKey, updateApiKey, geminiApiKey, setGeminiApiKey } = useAppContext();
   const [tempApiKey, setTempApiKey] = useState(apiKey);
+  const [tempGeminiApiKey, setTempGeminiApiKey] = useState(geminiApiKey);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const handleSaveApiKey = () => {
+  // Update temp keys if context keys change (e.g. loaded from localStorage after initial render)
+  useEffect(() => {
+    setTempApiKey(apiKey);
+  }, [apiKey]);
+
+  useEffect(() => {
+    setTempGeminiApiKey(geminiApiKey);
+  }, [geminiApiKey]);
+
+  const handleSaveApiKeys = () => {
     updateApiKey(tempApiKey);
+    setGeminiApiKey(tempGeminiApiKey); // Save Gemini Key
     setIsDialogOpen(false);
   };
 
@@ -34,29 +45,43 @@ export default function Header() {
             <DialogTrigger asChild>
               <Button variant="outline" size="sm">
                 <Key className="mr-2 h-4 w-4" />
-                {apiKey ? 'Update API Key' : 'Set API Key'}
+                {apiKey && geminiApiKey ? 'Update API Keys' : 'Set API Keys'}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>YouTube Data API Key</DialogTitle>
+                <DialogTitle>API Keys</DialogTitle>
                 <DialogDescription>
-                  Enter your YouTube Data API v3 key to use the tools. You can get one from the Google Cloud Console.
+                  Enter your YouTube Data API v3 key and Gemini API key. These are stored in your browser's localStorage.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
-                <Input
-                  type="password"
-                  placeholder="Enter your API key"
-                  value={tempApiKey}
-                  onChange={(e) => setTempApiKey(e.target.value)}
-                />
+                <div>
+                  <label htmlFor="youtubeKey" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">YouTube Data API Key</label>
+                  <Input
+                    id="youtubeKey"
+                    type="password"
+                    placeholder="Enter your YouTube API key"
+                    value={tempApiKey}
+                    onChange={(e) => setTempApiKey(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="geminiKey" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Gemini API Key</label>
+                  <Input
+                    id="geminiKey"
+                    type="password"
+                    placeholder="Enter your Gemini API Key"
+                    value={tempGeminiApiKey}
+                    onChange={(e) => setTempGeminiApiKey(e.target.value)}
+                  />
+                </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button onClick={handleSaveApiKey}>
-                    Save
+                  <Button onClick={handleSaveApiKeys}>
+                    Save Keys
                   </Button>
                 </div>
               </div>
