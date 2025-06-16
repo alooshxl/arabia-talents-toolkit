@@ -6,13 +6,14 @@ import {
   Film, 
   Search, 
   Activity,
-  Sparkles // Added for the new tool
+  Sparkles, // Icon for AI Video Summarizer
+  MessageSquareText // Icon for Arabia Comment Mapper
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function Sidebar() {
   const location = useLocation();
-  
+
   const navItems = [
     {
       name: 'Channel Analytics',
@@ -45,9 +46,14 @@ export default function Sidebar() {
       icon: <Activity size={20} />
     },
     {
-      name: 'AI Video Summarizer',
+      name: 'AI Video Summarizer', // Added from feat/gemini-video-summarizer
       path: '/tools/video-summarizer',
       icon: <Sparkles size={20} />
+    },
+    {
+      name: 'Arabia Comment Mapper', // Kept from main
+      path: '/tools/arabia-comment-mapper',
+      icon: <MessageSquareText size={20} />
     }
   ];
 
@@ -85,4 +91,3 @@ export default function Sidebar() {
     </aside>
   );
 }
-
