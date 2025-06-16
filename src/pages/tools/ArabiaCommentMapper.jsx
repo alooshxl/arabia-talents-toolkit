@@ -42,12 +42,81 @@ const countryDetails = {
 
 const getCountryFlag = (countryName) => countryDetails[countryName]?.flag || '🏳️';
 
+// Function to parse the Gemini batch response
+const parseGeminiBatchResponse = (responseText) => {
+  if (!responseText || typeof responseText !== 'string' || responseText.trim() === '') {
+    return [];
+  }
+
+  const lines = responseText.split('\n');
+  const results = [];
+  // Regex to capture percentage and country name. Handles variations like "10%", "10.5 %", "10 % Country Name"
+  const lineRegex = /(\d+\.?\d*)\s*%\s*([\s\S]+)/;
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    if (trimmedLine === '') {
+      continue;
+    }
+
+    const match = trimmedLine.match(lineRegex);
+    if (match) {
+      const percentageStr = match[1];
+      const countryNameStr = match[2].trim();
+
+      const percentage = parseFloat(percentageStr);
+      if (isNaN(percentage)) {
+        console.warn(`Could not parse percentage from line: "${trimmedLine}"`);
+        continue;
+      }
+
+      let normalizedCountryName = countryNameStr;
+      // Normalize if it's a known country from our list, otherwise use as is (or map to 'Other')
+      const isKnownTargetCountry = targetArabCountriesList.includes(countryNameStr);
+
+      if (isKnownTargetCountry) {
+        normalizedCountryName = countryNameStr; // Already good
+      } else if (countryNameStr.toLowerCase().includes('other') || countryNameStr.toLowerCase().includes('uncertain')) {
+        normalizedCountryName = 'Unknown/Error'; // Or a more specific "Other/Uncertain" category if desired
+      } else if (countryNameStr) {
+        // If it's not in the target list and not "Other/Uncertain", classify as "Unknown/Error" or keep original for review
+        // For now, let's keep original if not explicitly "Other/Uncertain" to see what Gemini returns.
+        // Could also be mapped to 'Other Arab Countries' if it seems like one but not in list.
+        // Decision: If not in targetArabCountriesList, it's 'Unknown/Error' for chart purposes,
+        // but we store the original name from Gemini if it's not explicitly 'Other' or 'Uncertain'.
+        // This behavior is more aligned with how performSingleAggregation handles non-target countries.
+        // Let's simplify: if it's not a target country, it will be grouped into Unknown/Error by the aggregation logic.
+        // So, we can just store the name as Gemini provided it, or normalize common variations.
+        // For this parser, we'll prioritize direct matches or specific "Other" terms.
+        // The aggregation logic downstream (performSingleAggregation) will handle grouping into 'Unknown/Error' if not a target country.
+        normalizedCountryName = countryNameStr;
+      }
+
+
+      if (normalizedCountryName && percentage > 0) { // Only add if percentage is positive
+        results.push({
+          country: normalizedCountryName,
+          percentage: percentage,
+          // count: 0, // Count will be derived later if needed, or based on total comments analyzed by Gemini
+          source: 'gemini-batch'
+        });
+      }
+    } else {
+      console.warn(`Could not parse line from Gemini response: "${trimmedLine}"`);
+    }
+  }
+  return results;
+};
+
+
 const ArabiaCommentMapper = () => {
   const [videoUrls, setVideoUrls] = useState('');
   const [geminiApiKey, setGeminiApiKey] = useState('');
   const [commentsData, setCommentsData] = useState([]); // Stores {videoId, title, comments: [...]}
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [rawGeminiBatchResult, setRawGeminiBatchResult] = useState(null);
+  const [geminiAnalysisCommentCount, setGeminiAnalysisCommentCount] = useState(0); // New state for Gemini comment count
 
   const [processedResults, setProcessedResults] = useState({
     youtubeApiAnalysis: null,
@@ -60,6 +129,8 @@ const ArabiaCommentMapper = () => {
     setIsLoading(true);
     setError('');
     setCommentsData([]);
+    setRawGeminiBatchResult(null);
+    setGeminiAnalysisCommentCount(0); // Reset Gemini comment count
     // Reset to initial dual structure
     setProcessedResults({
       youtubeApiAnalysis: null,
@@ -135,36 +206,12 @@ const ArabiaCommentMapper = () => {
               }
             }
 
-            let geminiCountry = null;
-            // Condition changed: removed !youtubeCountry
-            if (geminiApiKey.trim() && comment.text && comment.text.trim() !== '') {
-              const prompt = `Analyze the following Arabic comment and determine the most likely country of origin of the commenter from this list: [${targetArabCountriesList.join(', ')}]. Focus on dialect, slang, and specific expressions. Return only the country name from the list, or 'Unknown' if uncertain. Comment: '${comment.text}'`;
-              try {
-                const geminiResult = await geminiApiService.generateContent(geminiApiKey, prompt);
-                if (geminiResult && targetArabCountriesList.includes(geminiResult)) {
-                  geminiCountry = geminiResult;
-                } else if (geminiResult && geminiResult.length < 30) {
-                  geminiCountry = 'Unknown (Non-standard)';
-                  console.warn(`Gemini returned non-standard country: ${geminiResult} for comment: ${comment.text.substring(0,50)}...`);
-                } else {
-                  geminiCountry = 'Unknown'; // Default if Gemini result is empty or too long
-                }
-              } catch (geminiError) {
-                console.error(`Gemini API error for comment "${comment.text.substring(0,50)}...":`, geminiError.message);
-                geminiCountry = 'Error (Gemini)';
-                if (!currentError.includes("Error with Gemini API occurred for some comments.")) {
-                    currentError += `Error with Gemini API occurred for some comments. Check console. `;
-                }
-              }
-            } else if (!geminiApiKey.trim() && comment.text && comment.text.trim() !== '') {
-              // If API key is missing, but we would have called Gemini, explicitly set geminiCountry to null or a specific marker
-              geminiCountry = null; // Or 'API Key Missing'
-            }
+            // Per-comment Gemini logic removed.
+            // geminiCountry is no longer stored per comment.
             processedCommentsContent.push({
               text: comment.text,
               authorChannelId: comment.authorChannelId,
               youtubeCountry: youtubeCountry,
-              geminiCountry: geminiCountry,
             });
           }
           allVideosData.push({ videoId, comments: processedCommentsContent, title });
@@ -173,7 +220,54 @@ const ArabiaCommentMapper = () => {
           currentError += `Error processing comments for video ${videoId} (${title}): ${videoError.message}. `;
         }
       }
-      setCommentsData(allVideosData);
+      setCommentsData(allVideosData); // Set data with only youtubeCountry
+
+      // === Batch Gemini Request ===
+      let collectedCommentTexts = [];
+      allVideosData.forEach(video => {
+        video.comments.forEach(comment => {
+          if (comment.text && comment.text.trim() !== '') {
+            collectedCommentTexts.push(comment.text);
+          }
+        });
+      });
+
+      // Use a Set to get unique comment texts, then convert back to an array
+      const uniqueCommentTexts = Array.from(new Set(collectedCommentTexts.map(t => t.trim()).filter(t => t)));
+      const geminiCommentCount = uniqueCommentTexts.length; // Store count for Gemini analysis
+      setGeminiAnalysisCommentCount(geminiCommentCount); // Set state
+
+      if (geminiApiKey.trim() && geminiCommentCount > 0) { // Use geminiCommentCount here
+        const batchPrompt = `You will receive a list of YouTube comments written in Arabic. Analyze these comments and estimate the percentage distribution of the commenters’ countries of origin, focusing on Arabic-speaking countries.
+
+Determine the country based on:
+Dialects and slang (e.g., Gulf Arabic, Egyptian Arabic, Iraqi terms, Levantine Arabic, etc.)
+Names, emojis, or cultural references
+Writing style or known expressions
+
+Your output should be a clear list of countries and the estimated percentage of commenters from each.
+
+Here is the list of comments:
+${uniqueCommentTexts.map(text => `- "${text.substring(0, 300)}${text.length > 300 ? '...' : ''}"`).join('\n')}
+`; // Truncate long comments in prompt
+
+        try {
+          console.log("Sending batch request to Gemini API with prompt:", batchPrompt);
+          const batchGeminiResponse = await geminiApiService.generateContent(geminiApiKey, batchPrompt);
+          setRawGeminiBatchResult(batchGeminiResponse);
+          console.log("Batch Gemini API Response:", batchGeminiResponse);
+        } catch (geminiBatchError) {
+          console.error("Gemini API batch request error:", geminiBatchError.message);
+          currentError += `Gemini API batch request error: ${geminiBatchError.message}. `;
+          setRawGeminiBatchResult(`Error: ${geminiBatchError.message}`); // Store error in batch result
+        }
+      } else {
+        setRawGeminiBatchResult(null); // No API key or no unique comments
+        if (geminiApiKey.trim() && uniqueCommentTexts.length === 0) {
+            currentError += 'No unique comment texts found to send to Gemini. ';
+        }
+      }
+
     } catch (e) {
       console.error("Error during analysis:", e);
       currentError += `An unexpected error occurred: ${e.message}.`;
@@ -181,16 +275,18 @@ const ArabiaCommentMapper = () => {
       setError(currentError.trim());
       setIsLoading(false);
     }
-  }, [videoUrls, geminiApiKey]);
+  }, [videoUrls, geminiApiKey, commentsData, selectedVideoFilter]); // commentsData and selectedVideoFilter for resetting processedResults title
 
-  const processAndAggregateData = useCallback((currentData, filterId) => {
-    const emptyAnalysisResult = {
-      chartData: [],
-      rankedList: [],
-      exampleCommentsByCountry: {},
-      totalAnalyzedComments: 0,
-      totalIdentifiedArabCountries: 0,
-      unknownOrNonArabPercentage: 0,
+  const processAndAggregateData = useCallback((currentData, filterId, geminiBatchResultText, geminiCommentCountInput) => {
+    const emptyResultBase = {
+      chartData: [], rankedList: [], exampleCommentsByCountry: {},
+      totalAnalyzedComments: 0, totalIdentifiedArabCountries: 0, unknownOrNonArabPercentage: 0, error: null,
+    };
+
+    if (!currentData) return { // Should not happen if handleAnalyzeClick sets commentsData first
+      commonTitle: "All Videos",
+      youtubeApiAnalysis: { ...emptyResultBase, title: "All Videos" },
+      geminiApiAnalysis: { ...emptyResultBase, title: "All Videos" },
     };
 
     let commentsToProcess = [];
@@ -205,139 +301,178 @@ const ArabiaCommentMapper = () => {
       }
     }
 
-    if (commentsToProcess.length === 0) {
-      return {
-        commonTitle: currentTitle,
-        youtubeApiAnalysis: { ...emptyAnalysisResult, title: currentTitle },
-        geminiApiAnalysis: { ...emptyAnalysisResult, title: currentTitle },
-      };
+    const youtubeApiAnalysisResult = performSingleAggregation(commentsToProcess, 'youtubeCountry', currentTitle);
+
+    let geminiApiAnalysisResult = { ...emptyResultBase, title: currentTitle, totalAnalyzedComments: geminiCommentCountInput, exampleCommentsByCountry: {} };
+
+    if (geminiBatchResultText && typeof geminiBatchResultText === 'string' && !geminiBatchResultText.startsWith('Error:')) {
+      const parsedGeminiData = parseGeminiBatchResponse(geminiBatchResultText);
+      if (parsedGeminiData.length > 0) {
+        let totalIdentifiedFromGemini = 0;
+        let unknownOrNonArabGeminiPercentageSum = 0;
+
+        const geminiRankedList = parsedGeminiData
+          .map(item => {
+            const isTarget = targetArabCountriesList.includes(item.country);
+            if (isTarget) {
+              totalIdentifiedFromGemini += Math.round((item.percentage / 100) * geminiCommentCountInput);
+            } else {
+              // Accumulate percentages for non-target countries from Gemini's list
+              unknownOrNonArabGeminiPercentageSum += item.percentage;
+            }
+            return {
+              name: item.country,
+              percentage: item.percentage,
+              flag: getCountryFlag(item.country),
+              count: Math.round((item.percentage / 100) * geminiCommentCountInput),
+              isTarget: isTarget,
+            };
+          })
+          .sort((a, b) => b.percentage - a.percentage); // Sort by percentage from Gemini
+
+        geminiApiAnalysisResult.rankedList = geminiRankedList;
+        geminiApiAnalysisResult.totalIdentifiedArabCountries = geminiRankedList.filter(c => c.isTarget).reduce((acc, c) => acc + c.count, 0);
+
+        // Chart Data for Gemini
+        const topFourGemini = geminiRankedList.filter(c => c.isTarget).slice(0, 4);
+        const otherArabGeminiSum = geminiRankedList.filter(c => c.isTarget).slice(4).reduce((sum, item) => sum + item.percentage, 0);
+
+        let geminiChartData = topFourGemini.map(c => ({ name: c.name, value: c.percentage }));
+
+        if (otherArabGeminiSum > 0) {
+          geminiChartData.push({ name: 'Other Arab Countries', value: parseFloat(otherArabGeminiSum.toFixed(1)) });
+        }
+
+        // Add the sum of non-target percentages as "Unknown/Error" from Gemini's perspective
+        if (unknownOrNonArabGeminiPercentageSum > 0) {
+             geminiChartData.push({ name: 'Unknown/Error', value: parseFloat(unknownOrNonArabGeminiPercentageSum.toFixed(1)) });
+        } else if (geminiChartData.length === 0 && geminiCommentCountInput > 0) {
+            // If no countries identified by Gemini at all, show 100% Unknown
+            geminiChartData.push({ name: 'Unknown/Error', value: 100 });
+        }
+
+
+        geminiApiAnalysisResult.chartData = geminiChartData
+          .map(item => ({ ...item, displayName: `${getCountryFlag(item.name)} ${item.name}` }))
+          .sort((a,b) => b.value - a.value);
+
+        geminiApiAnalysisResult.unknownOrNonArabPercentage = parseFloat(unknownOrNonArabGeminiPercentageSum.toFixed(1));
+
+      } else {
+         geminiApiAnalysisResult.error = "Gemini response parsed but yielded no data.";
+      }
+    } else if (geminiBatchResultText && typeof geminiBatchResultText === 'string' && geminiBatchResultText.startsWith('Error:')) {
+        geminiApiAnalysisResult.error = geminiBatchResultText;
+        geminiApiAnalysisResult.chartData = [{name: 'Unknown/Error', value: 100, displayName: `${getCountryFlag('Unknown/Error')} Unknown/Error` }];
+        geminiApiAnalysisResult.unknownOrNonArabPercentage = 100;
+    } else if (!geminiApiKey.trim() && geminiCommentCountInput > 0) {
+        geminiApiAnalysisResult.error = "Gemini API key not provided. Analysis skipped.";
     }
 
-    const performSingleAggregation = (comments, countryFieldName) => {
-      const countryCounts = {};
-      targetArabCountriesList.forEach(country => countryCounts[country] = 0);
-      let unknownOrNonArabCount = 0;
-      let identifiedArabCount = 0;
-      let processedCommentCountForSource = 0; // Comments that had a value for this source
-
-      comments.forEach(comment => {
-        let sourceCountry = comment[countryFieldName];
-        if (sourceCountry === undefined || sourceCountry === null || sourceCountry === 'Error (Gemini)') {
-          // If error from Gemini, or no data from source, it's not counted in this source's "analyzed" total for identified Arab countries
-          // but might be counted in overall "unknown" if no other source provides data.
-          // For this specific aggregation, we only care about comments this source *could* identify.
-          if (sourceCountry === 'Error (Gemini)') unknownOrNonArabCount++; // Count errors specifically if needed
-          return; // Skip if no data from this source or it's an error state we exclude from positive ID
-        }
-        processedCommentCountForSource++;
-
-
-        if (sourceCountry && sourceCountry.length === 2) { // Normalize country code
-          const countryEntry = Object.entries(countryDetails).find(([name, details]) => details.code === sourceCountry.toUpperCase());
-          if (countryEntry) sourceCountry = countryEntry[0];
-        }
-
-        if (sourceCountry && targetArabCountriesList.includes(sourceCountry)) {
-          countryCounts[sourceCountry]++;
-          identifiedArabCount++;
-        } else {
-          // Includes 'Unknown', 'Unknown (Non-standard)', or non-target countries
-          unknownOrNonArabCount++;
-        }
-      });
-
-      // Base percentages on comments that had a value for this source, or all comments if that's preferred.
-      // Using processedCommentCountForSource makes percentages relative to comments processed by *this* source.
-      const totalCommentsForPercentageCalc = processedCommentCountForSource;
-
-      const sortedArabCountries = Object.entries(countryCounts)
-        .filter(([name, count]) => count > 0)
-        .sort(([, aCount], [, bCount]) => bCount - aCount);
-
-      const rankedList = sortedArabCountries.map(([name, count]) => ({
-        name,
-        count,
-        percentage: totalCommentsForPercentageCalc > 0 ? parseFloat(((count / totalCommentsForPercentageCalc) * 100).toFixed(1)) : 0,
-        flag: getCountryFlag(name)
-      }));
-
-      const topFourForChart = rankedList.slice(0, 4);
-      const otherArabCount = sortedArabCountries.slice(4).reduce((sum, [, count]) => sum + count, 0);
-
-      let chartDataPayload = topFourForChart.map(c => ({
-          name: c.name,
-          value: c.percentage
-      }));
-
-      if (otherArabCount > 0) {
-        chartDataPayload.push({
-          name: 'Other Arab Countries',
-          value: totalCommentsForPercentageCalc > 0 ? parseFloat(((otherArabCount / totalCommentsForPercentageCalc) * 100).toFixed(1)) : 0
-        });
-      }
-
-      const unknownOrNonArabPercentageVal = totalCommentsForPercentageCalc > 0 ? parseFloat(((unknownOrNonArabCount / totalCommentsForPercentageCalc) * 100).toFixed(1)) : 0;
-      if (unknownOrNonArabPercentageVal > 0 || (chartDataPayload.length === 0 && totalCommentsForPercentageCalc > 0) ) {
-          chartDataPayload.push({ name: 'Unknown/Error', value: unknownOrNonArabPercentageVal });
-      }
-
-      chartDataPayload = chartDataPayload
-        .map(item => ({
-          ...item,
-          displayName: `${getCountryFlag(item.name)} ${item.name}`,
-        }))
-        .sort((a,b) => b.value - a.value);
-
-      const exampleCommentsByCountry = {};
-      topFourForChart.forEach(country => {
-        exampleCommentsByCountry[country.name] = comments
-          .filter(comment => {
-              let finalC = comment[countryFieldName];
-              if (finalC && finalC.length === 2) {
-                  const cEntry = Object.entries(countryDetails).find(([n, d]) => d.code === finalC.toUpperCase());
-                  if (cEntry) finalC = cEntry[0];
-              }
-              return finalC === country.name;
-          })
-          .slice(0, 2)
-          .map(comment => comment.text);
-      });
-
-      return {
-        title: currentTitle, // Title here is more for consistency if used directly
-        chartData: chartDataPayload,
-        rankedList,
-        exampleCommentsByCountry,
-        totalAnalyzedComments: processedCommentCountForSource, // Total comments processed by this source
-        totalIdentifiedArabCountries: identifiedArabCount,
-        unknownOrNonArabPercentage: unknownOrNonArabPercentageVal
-      };
-    };
-
-    const youtubeApiAnalysis = performSingleAggregation(commentsToProcess, 'youtubeCountry');
-    const geminiApiAnalysis = performSingleAggregation(commentsToProcess, 'geminiCountry');
 
     return {
       commonTitle: currentTitle,
-      youtubeApiAnalysis,
-      geminiApiAnalysis
+      youtubeApiAnalysis: youtubeApiAnalysisResult,
+      geminiApiAnalysis: geminiApiAnalysisResult,
     };
   }, []);
 
-  useEffect(() => {
-    if (commentsData && commentsData.length > 0) {
-      const results = processAndAggregateData(commentsData, selectedVideoFilter);
-      // This will need to be updated in the next step to return the dual structure
-      // For now, to avoid breaking the UI, we'll assume it returns the old structure
-      // or we temporarily adapt. Let's assume processAndAggregateData is not yet changed.
-      // To prevent immediate errors, we'll have to temporarily assign to one part or adapt UI.
-      // For this step, the main goal is state structure change.
-      // The UI will temporarily break until processAndAggregateData and UI rendering are updated.
-      setProcessedResults(results); // This line will be the source of an error until next step.
-    } else {
-      setProcessedResults({ youtubeApiAnalysis: null, geminiApiAnalysis: null, commonTitle: 'All Videos' });
+
+  // Inner helper for performSingleAggregation (moved from inside processAndAggregateData for clarity)
+  // This is primarily for YouTube API per-comment data now.
+  const performSingleAggregation = (comments, countryFieldName, title) => {
+    const emptyResult = {
+      chartData: [], rankedList: [], exampleCommentsByCountry: {},
+      totalAnalyzedComments: 0, totalIdentifiedArabCountries: 0, unknownOrNonArabPercentage: 0, title: title
+    };
+    // This function is now primarily for YouTube per-comment data.
+    // Gemini data comes from batch and is processed differently.
+    if (!comments || comments.length === 0 || countryFieldName !== 'youtubeCountry') {
+        return emptyResult;
     }
-  }, [commentsData, selectedVideoFilter, processAndAggregateData]); // processAndAggregateData will also change
+
+    const countryCounts = {};
+    targetArabCountriesList.forEach(country => countryCounts[country] = 0);
+    let unknownOrNonArabCount = 0;
+    let identifiedArabCount = 0;
+    let processedCommentCountForSource = 0;
+
+    comments.forEach(comment => {
+      let sourceCountry = comment[countryFieldName]; // Should be 'youtubeCountry'
+      if (sourceCountry !== undefined && sourceCountry !== null) {
+         processedCommentCountForSource++;
+         if (sourceCountry.length === 2) {
+            const countryEntry = Object.entries(countryDetails).find(([name, details]) => details.code === sourceCountry.toUpperCase());
+            if (countryEntry) sourceCountry = countryEntry[0];
+         }
+         if (targetArabCountriesList.includes(sourceCountry)) {
+            countryCounts[sourceCountry]++;
+            identifiedArabCount++;
+         } else {
+            unknownOrNonArabCount++;
+         }
+      }
+    });
+
+    const totalCommentsForPercentageCalc = processedCommentCountForSource;
+
+    const sortedArabCountries = Object.entries(countryCounts)
+      .filter(([, count]) => count > 0)
+      .sort(([, aCount], [, bCount]) => bCount - aCount);
+
+    const rankedList = sortedArabCountries.map(([name, count]) => ({
+      name, count,
+      percentage: totalCommentsForPercentageCalc > 0 ? parseFloat(((count / totalCommentsForPercentageCalc) * 100).toFixed(1)) : 0,
+      flag: getCountryFlag(name)
+    }));
+
+    const topFourForChart = rankedList.slice(0, 4);
+    const otherArabCount = sortedArabCountries.slice(4).reduce((sum, [, count]) => sum + count, 0);
+
+    let chartDataPayload = topFourForChart.map(c => ({ name: c.name, value: c.percentage }));
+    if (otherArabCount > 0) {
+      chartDataPayload.push({
+        name: 'Other Arab Countries',
+        value: totalCommentsForPercentageCalc > 0 ? parseFloat(((otherArabCount / totalCommentsForPercentageCalc) * 100).toFixed(1)) : 0
+      });
+    }
+    const unknownOrNonArabPercentageVal = totalCommentsForPercentageCalc > 0 ? parseFloat(((unknownOrNonArabCount / totalCommentsForPercentageCalc) * 100).toFixed(1)) : 0;
+    if (unknownOrNonArabPercentageVal > 0 || (chartDataPayload.length === 0 && totalCommentsForPercentageCalc > 0)) {
+        chartDataPayload.push({ name: 'Unknown/Error', value: unknownOrNonArabPercentageVal });
+    }
+
+    chartDataPayload = chartDataPayload
+      .map(item => ({ ...item, displayName: `${getCountryFlag(item.name)} ${item.name}` }))
+      .sort((a,b) => b.value - a.value);
+
+    const exampleCommentsByCountry = {};
+    topFourForChart.forEach(country => {
+      exampleCommentsByCountry[country.name] = comments
+        .filter(comment => {
+            let finalC = comment[countryFieldName];
+            if (finalC && finalC.length === 2) {
+                const cEntry = Object.entries(countryDetails).find(([n, d]) => d.code === finalC.toUpperCase());
+                if (cEntry) finalC = cEntry[0];
+            }
+            return finalC === country.name;
+        })
+        .slice(0, 2).map(comment => comment.text);
+    });
+
+    return {
+      title, chartData: chartDataPayload, rankedList, exampleCommentsByCountry,
+      totalAnalyzedComments: processedCommentCountForSource,
+      totalIdentifiedArabCountries: identifiedArabCount,
+      unknownOrNonArabPercentage: unknownOrNonArabPercentageVal
+    };
+  };
+
+
+  useEffect(() => {
+    const results = processAndAggregateData(commentsData, selectedVideoFilter, rawGeminiBatchResult, geminiAnalysisCommentCount);
+    setProcessedResults(results);
+  }, [commentsData, rawGeminiBatchResult, selectedVideoFilter, processAndAggregateData, geminiAnalysisCommentCount]);
+
 
 // Internal component to display a single set of analysis results
 const AnalysisResultBlock = ({ analysisName, analysisData }) => {
