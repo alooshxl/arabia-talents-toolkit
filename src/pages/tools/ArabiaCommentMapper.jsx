@@ -403,7 +403,6 @@ const ArabiaCommentMapper = () => {
               </pre>
             </div>
           )}
-        </div>
       </CardContent>
     </Card>
   );
