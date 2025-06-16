@@ -12,6 +12,7 @@ export const useAppContext = () => {
 
 export const AppProvider = ({ children }) => {
   const [apiKey, setApiKey] = useState(localStorage.getItem('youtube-api-key') || '');
+  const [geminiApiKey, setGeminiApiKeyState] = useState(localStorage.getItem('gemini-api-key') || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [currentTheme, setCurrentTheme] = useState(
@@ -21,6 +22,11 @@ export const AppProvider = ({ children }) => {
   const updateApiKey = (key) => {
     setApiKey(key);
     localStorage.setItem('youtube-api-key', key);
+  };
+
+  const setGeminiApiKey = (key) => {
+    setGeminiApiKeyState(key);
+    localStorage.setItem('gemini-api-key', key);
   };
 
   const changeTheme = (themeName) => {
@@ -52,7 +58,9 @@ export const AppProvider = ({ children }) => {
     error,
     setError,
     currentTheme,
-    changeTheme
+    changeTheme,
+    geminiApiKey,
+    setGeminiApiKey
   };
 
   return (

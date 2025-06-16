@@ -12,6 +12,7 @@ const BulkChannelAnalyzer = lazy(() => import('./pages/tools/BulkChannelAnalyzer
 const BulkVideoAnalyzer = lazy(() => import('./pages/tools/BulkVideoAnalyzer'));
 const SearchTool = lazy(() => import('./pages/tools/SearchTool'));
 const TrendingChecker = lazy(() => import('./pages/tools/TrendingChecker'));
+const VideoSummarizer = lazy(() => import('./pages/tools/VideoSummarizer')); // New import
 
 // Loading component
 function LoadingFallback() {
@@ -61,6 +62,11 @@ function App() {
             <Route path="tools/trending-checker" element={
               <Suspense fallback={<LoadingFallback />}>
                 <TrendingChecker />
+              </Suspense>
+            } />
+            <Route path="tools/video-summarizer" element={ // New route
+              <Suspense fallback={<LoadingFallback />}>
+                <VideoSummarizer />
               </Suspense>
             } />
             <Route path="*" element={<Navigate to="/" replace />} />
