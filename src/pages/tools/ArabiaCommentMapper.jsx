@@ -336,21 +336,18 @@ const ArabiaCommentMapper = () => {
               disabled={isLoading}
             />
           </div>
+          {/* End of inputs within Configuration CardContent */}
+          </CardContent> {/* Closes CardContent (L293) of Configuration Card */}
+          <CardFooter> {/* Add CardFooter for the Button */}
+            <Button className="w-full" onClick={handleAnalyzeClick} disabled={isLoading}>
+              {isLoading ? 'Analyzing...' : 'Analyze Comments'}
+            </Button>
+          </CardFooter>
+        </Card> {/* Closes Configuration Card (L291) */}
 
-          {/* Alternative file input - can be implemented later
-          <div>
-            <label htmlFor="fileUpload" className="block text-sm font-medium text-gray-700 mb-1">
-              Or Upload a .csv/.txt file
-            </label>
-            <Input id="fileUpload" type="file" disabled={isLoading} />
-          </div>
-          */}
-
-          <Button className="w-full" onClick={handleAnalyzeClick} disabled={isLoading}>
-            {isLoading ? 'Analyzing...' : 'Analyze Comments'}
-          </Button>
-
-          {error && (
+        {/* Error display, Results Filter, Placeholders, and Raw Data sections are siblings
+            to the Configuration Card, within the main page's CardContent (L289) */}
+        {error && (
             <div className="text-red-500 text-sm p-2 bg-red-100 border border-red-400 rounded-md">
               <p>Error: {error}</p>
             </div>
@@ -403,7 +400,7 @@ const ArabiaCommentMapper = () => {
               </pre>
             </div>
           )}
-        </div>
+      {/* Main CardContent (L289) and main Card (L285) are correctly closed here from previous step */}
       </CardContent>
     </Card>
   );
