@@ -12,7 +12,8 @@ const BulkChannelAnalyzer = lazy(() => import('./pages/tools/BulkChannelAnalyzer
 const BulkVideoAnalyzer = lazy(() => import('./pages/tools/BulkVideoAnalyzer'));
 const SearchTool = lazy(() => import('./pages/tools/SearchTool'));
 const TrendingChecker = lazy(() => import('./pages/tools/TrendingChecker'));
-const VideoSummarizer = lazy(() => import('./pages/tools/VideoSummarizer')); // New import
+const VideoSummarizer = lazy(() => import('./pages/tools/VideoSummarizer'));
+const ArabiaCommentMapper = lazy(() => import('./pages/tools/ArabiaCommentMapper'));
 
 // Loading component
 function LoadingFallback() {
@@ -64,9 +65,14 @@ function App() {
                 <TrendingChecker />
               </Suspense>
             } />
-            <Route path="tools/video-summarizer" element={ // New route
+            <Route path="tools/video-summarizer" element={
               <Suspense fallback={<LoadingFallback />}>
                 <VideoSummarizer />
+              </Suspense>
+            } />
+            <Route path="tools/arabia-comment-mapper" element={
+              <Suspense fallback={<LoadingFallback />}>
+                <ArabiaCommentMapper />
               </Suspense>
             } />
             <Route path="*" element={<Navigate to="/" replace />} />
