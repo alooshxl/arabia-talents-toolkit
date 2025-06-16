@@ -46,12 +46,12 @@ export default function Sidebar() {
       icon: <Activity size={20} />
     },
     {
-      name: 'AI Video Summarizer', // Added from feat/gemini-video-summarizer
+      name: 'AI Video Summarizer',
       path: '/tools/video-summarizer',
       icon: <Sparkles size={20} />
     },
     {
-      name: 'Arabia Comment Mapper', // Kept from main
+      name: 'Arabia Comment Mapper',
       path: '/tools/arabia-comment-mapper',
       icon: <MessageSquareText size={20} />
     }
