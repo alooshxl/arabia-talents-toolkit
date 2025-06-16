@@ -6,13 +6,14 @@ import {
   Film, 
   Search, 
   Activity,
-  MessageSquareText // Icon for comment mapping
+  Sparkles, // Icon for AI Video Summarizer
+  MessageSquareText // Icon for Arabia Comment Mapper
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function Sidebar() {
   const location = useLocation();
-  
+
   const navItems = [
     {
       name: 'Channel Analytics',
@@ -43,6 +44,11 @@ export default function Sidebar() {
       name: 'Trending Checker',
       path: '/tools/trending-checker',
       icon: <Activity size={20} />
+    },
+    {
+      name: 'AI Video Summarizer',
+      path: '/tools/video-summarizer',
+      icon: <Sparkles size={20} />
     },
     {
       name: 'Arabia Comment Mapper',
@@ -85,4 +91,3 @@ export default function Sidebar() {
     </aside>
   );
 }
-
