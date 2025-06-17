@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import Game from '@/components/game/Game';
 
 export default function Home() {
   const tools = [
@@ -101,6 +102,17 @@ export default function Home() {
             </CardFooter>
           </Card>
         ))}
+      </div>
+
+      <div id="pubgmini-game-section" className="mt-12 text-center">
+        <h2 className="text-3xl font-bold mb-4">Try our Mini Game!</h2>
+        <div className="flex justify-center p-4">
+          <Card className="w-full max-w-2xl overflow-hidden">
+            <CardContent className="p-0">
+              <Game />
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

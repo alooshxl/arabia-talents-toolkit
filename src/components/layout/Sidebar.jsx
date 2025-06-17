@@ -58,7 +58,7 @@ export default function Sidebar() {
     },
     {
       name: 'PUBGMini', // Renamed
-      path: '/tools/pubgmini', // New path to dedicated page
+      path: '/#pubgmini-game-section',
       icon: <Gamepad2 size={20} /> // Icon remains
     }
   ];
