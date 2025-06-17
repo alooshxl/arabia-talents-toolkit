@@ -1,16 +1,19 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 
-const SOCIAL_MEDIA_ICONS = ['YouTube', 'TikTok', 'Insta', 'Facebook']; // Shorter names for display
-
-const PLAYER_JUMP_VELOCITY = 11; // Adjusted
-const GRAVITY = 0.6; // Adjusted
-const OBSTACLE_SPEED = 3.5; // Adjusted
+// Define constants that are not difficulty-dependent
 const PLAYER_WIDTH = 30;
 const PLAYER_HEIGHT = 50;
 const OBSTACLE_WIDTH = 40;
 const OBSTACLE_HEIGHT = 40;
-const OBSTACLE_SPAWN_INTERVAL_MIN = 80; // Min frames between spawns
-const OBSTACLE_SPAWN_INTERVAL_MAX = 150; // Max frames between spawns
+const GRAVITY = 0.6;
+const BASE_PLAYER_JUMP_VELOCITY = 11; // Base jump velocity, might be adjusted by difficulty
+const SOCIAL_MEDIA_ICONS = ['YouTube', 'TikTok', 'Insta', 'Facebook'];
+
+const DIFFICULTY_SETTINGS = {
+  easy: { name: 'Easy', speed: 2.5, minInterval: 120, maxInterval: 200, jumpVelocity: BASE_PLAYER_JUMP_VELOCITY },
+  medium: { name: 'Medium', speed: 3.5, minInterval: 80, maxInterval: 150, jumpVelocity: BASE_PLAYER_JUMP_VELOCITY },
+  hard: { name: 'Hard', speed: 5.0, minInterval: 50, maxInterval: 100, jumpVelocity: BASE_PLAYER_JUMP_VELOCITY },
+};
 
 export default function Game() {
   const [playerPos, setPlayerPos] = useState({ x: 50, y: 250 });
@@ -21,44 +24,62 @@ export default function Game() {
   const [gameOver, setGameOver] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [framesSinceLastObstacle, setFramesSinceLastObstacle] = useState(0);
-  const [nextObstacleInterval, setNextObstacleInterval] = useState(OBSTACLE_SPAWN_INTERVAL_MIN);
+
+  const [difficulty, setDifficulty] = useState('medium');
+  const [showDifficultyScreen, setShowDifficultyScreen] = useState(true);
+  const [gameParams, setGameParams] = useState(DIFFICULTY_SETTINGS.medium);
 
   const gameAreaRef = useRef(null);
-  const gameLoopRef = useRef(null); // For requestAnimationFrame
+  const gameLoopRef = useRef(null);
+  const nextObstacleIntervalRef = useRef(0);
 
-  const gameWidth = 600; // Fixed width
-  const gameHeight = 300; // Fixed height
+  const gameWidth = 600;
+  const gameHeight = 300;
 
   const resetGameState = useCallback(() => {
     setPlayerPos({ x: 50, y: gameHeight - PLAYER_HEIGHT });
     setPlayerVelY(0);
     setObstacles([]);
     setScore(0);
-    setGameOver(false);
     setFramesSinceLastObstacle(0);
-    setNextObstacleInterval(
-      Math.floor(Math.random() * (OBSTACLE_SPAWN_INTERVAL_MAX - OBSTACLE_SPAWN_INTERVAL_MIN + 1)) + OBSTACLE_SPAWN_INTERVAL_MIN
-    );
-  }, [gameHeight]);
+    if (gameParams) {
+        nextObstacleIntervalRef.current = Math.floor(Math.random() * (gameParams.maxInterval - gameParams.minInterval + 1)) + gameParams.minInterval;
+    }
+  }, [gameHeight, gameParams]);
 
-  const startGame = useCallback(() => {
+  const startGameLogic = useCallback((currentParams) => {
+    setGameParams(currentParams);
     resetGameState();
+    setGameOver(false);
     setIsRunning(true);
     if (gameAreaRef.current) {
       gameAreaRef.current.focus();
     }
   }, [resetGameState]);
 
+  const selectDifficultyAndStart = useCallback((selectedDifficultyKey) => {
+    const selectedParams = DIFFICULTY_SETTINGS[selectedDifficultyKey];
+    setDifficulty(selectedDifficultyKey);
+    setShowDifficultyScreen(false);
+    startGameLogic(selectedParams);
+  }, [startGameLogic]);
+
+  const startGame = useCallback(() => {
+      startGameLogic(gameParams);
+  }, [startGameLogic, gameParams]);
+
   const jump = useCallback(() => {
     if (!gameOver && playerPos.y >= gameHeight - PLAYER_HEIGHT - 5 && isRunning) {
-      setPlayerVelY(-PLAYER_JUMP_VELOCITY);
+      setPlayerVelY(-gameParams.jumpVelocity);
     }
-  }, [gameOver, playerPos.y, gameHeight, isRunning]);
+  }, [gameOver, playerPos.y, gameHeight, isRunning, gameParams]);
 
   useEffect(() => {
     const handleKeyPress = (event) => {
       if (event.code === 'Space' || event.key === ' ') {
         event.preventDefault();
+        if (showDifficultyScreen) return;
+
         if (gameOver) {
           startGame();
         } else if (!isRunning) {
@@ -75,13 +96,11 @@ export default function Game() {
     return () => {
       targetElement.removeEventListener('keydown', handleKeyPress);
     };
-  }, [jump, gameOver, isRunning, startGame]);
+  }, [jump, gameOver, isRunning, startGame, showDifficultyScreen]);
 
-  // Game Loop
   useEffect(() => {
     if (isRunning && !gameOver) {
       gameLoopRef.current = requestAnimationFrame(() => {
-        // 1. Player Physics
         let newPlayerVelY = playerVelY + GRAVITY;
         let newPlayerY = playerPos.y + newPlayerVelY;
 
@@ -92,43 +111,35 @@ export default function Game() {
         setPlayerVelY(newPlayerVelY);
         setPlayerPos(prev => ({ ...prev, y: newPlayerY }));
 
-        // 2. Obstacle Management
-        setFramesSinceLastObstacle(prev => prev + 1);
-        let newObstacles = obstacles.map(obs => ({ ...obs, x: obs.x - OBSTACLE_SPEED }));
+        let currentFrames = framesSinceLastObstacle + 1;
+        let newObstaclesList = [...obstacles];
 
-        // Score and remove off-screen obstacles
+        if (currentFrames >= nextObstacleIntervalRef.current) {
+          currentFrames = 0;
+          nextObstacleIntervalRef.current = Math.floor(Math.random() * (gameParams.maxInterval - gameParams.minInterval + 1)) + gameParams.minInterval;
+          const newObstacle = {
+            id: Date.now(),
+            x: gameWidth,
+            y: gameHeight - OBSTACLE_HEIGHT,
+            type: SOCIAL_MEDIA_ICONS[Math.floor(Math.random() * SOCIAL_MEDIA_ICONS.length)],
+            scored: false,
+          };
+          newObstaclesList.push(newObstacle);
+        }
+        setFramesSinceLastObstacle(currentFrames);
+
         let currentScore = score;
-        newObstacles = newObstacles.filter(obs => {
+        newObstaclesList = newObstaclesList.map(obs => ({ ...obs, x: obs.x - gameParams.speed })).filter(obs => {
           if (!obs.scored && obs.x + OBSTACLE_WIDTH < playerPos.x) {
             currentScore++;
             obs.scored = true;
           }
-          return obs.x > -OBSTACLE_WIDTH; // Keep if on screen
+          return obs.x > -OBSTACLE_WIDTH;
         });
         setScore(currentScore);
+        setObstacles(newObstaclesList);
 
-        // Generate new obstacles
-        if (framesSinceLastObstacle >= nextObstacleInterval) {
-          setFramesSinceLastObstacle(0);
-          setNextObstacleInterval(
-            Math.floor(Math.random() * (OBSTACLE_SPAWN_INTERVAL_MAX - OBSTACLE_SPAWN_INTERVAL_MIN + 1)) + OBSTACLE_SPAWN_INTERVAL_MIN
-          );
-          const newObstacle = {
-            id: Date.now(),
-            x: gameWidth,
-            y: gameHeight - PLAYER_HEIGHT - Math.random() * 20, // Slight y variation for ground obstacles
-            type: SOCIAL_MEDIA_ICONS[Math.floor(Math.random() * SOCIAL_MEDIA_ICONS.length)],
-            scored: false,
-          };
-          // Ensure obstacle y is such that player can jump over it
-          // For this simple ground obstacle, y will be gameHeight - OBSTACLE_HEIGHT
-          newObstacle.y = gameHeight - OBSTACLE_HEIGHT;
-          newObstacles.push(newObstacle);
-        }
-        setObstacles(newObstacles);
-
-        // 3. Collision Detection
-        for (let obs of newObstacles) {
+        for (let obs of newObstaclesList) {
           if (
             playerPos.x < obs.x + OBSTACLE_WIDTH &&
             playerPos.x + PLAYER_WIDTH > obs.x &&
@@ -150,10 +161,16 @@ export default function Game() {
         cancelAnimationFrame(gameLoopRef.current);
       }
     };
-  }, [isRunning, gameOver, playerPos, playerVelY, obstacles, score, highScore, gameHeight, gameWidth, nextObstacleInterval, framesSinceLastObstacle]);
+  }, [isRunning, gameOver, playerPos, playerVelY, obstacles, score, highScore, gameHeight, gameWidth, gameParams, framesSinceLastObstacle]);
 
+  useEffect(() => {
+    if (!isRunning && gameParams) {
+        nextObstacleIntervalRef.current = Math.floor(Math.random() * (gameParams.maxInterval - gameParams.minInterval + 1)) + gameParams.minInterval;
+    }
+  }, [gameParams, isRunning]);
 
   const handleGameAreaClick = () => {
+    if (showDifficultyScreen) return;
     if (gameOver) {
       startGame();
     } else if (!isRunning) {
@@ -163,7 +180,93 @@ export default function Game() {
     }
   };
 
-  if (!isRunning && !gameOver) {
+  const goToDifficultyScreen = () => {
+    setGameOver(false);
+    setIsRunning(false);
+    setShowDifficultyScreen(true);
+  };
+
+  if (showDifficultyScreen) {
+    return (
+      <div
+        ref={gameAreaRef}
+        style={{
+            width: '100%',
+            maxWidth: `${gameWidth}px`,
+            height: `${gameHeight}px`,
+            border: '1px solid #ccc',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            textAlign: 'center',
+            userSelect: 'none',
+        }}
+        tabIndex={0}
+      >
+        <h2 style={{ marginBottom: '30px', fontSize: '24px' }}>Select Difficulty</h2>
+        {Object.keys(DIFFICULTY_SETTINGS).map(key => (
+          <button
+            key={key}
+            onClick={() => selectDifficultyAndStart(key)}
+            style={{
+              padding: '15px 30px',
+              margin: '10px',
+              fontSize: '18px',
+              cursor: 'pointer',
+              minWidth: '150px',
+              borderRadius: '5px',
+              border: '1px solid #ddd',
+              backgroundColor: '#f0f0f0'
+            }}
+          >
+            {DIFFICULTY_SETTINGS[key].name}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  if (gameOver) {
+    return (
+      <div
+        ref={gameAreaRef}
+         style={{
+            width: '100%',
+            maxWidth: `${gameWidth}px`,
+            height: `${gameHeight}px`,
+            border: '1px solid #ccc',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            textAlign: 'center',
+            cursor: 'pointer',
+            userSelect: 'none',
+        }}
+        onClick={(e) => { e.stopPropagation(); startGame(); }}
+        tabIndex={0}
+        >
+        <h2 style={{fontSize: '22px', marginBottom: '15px', padding: '0 20px'}}>Finish your work and come back. I’ll make the game easier for you — no promises.</h2>
+        <p style={{fontSize: '20px'}}>Your Score: {score}</p>
+        <p style={{fontSize: '18px', marginTop: '5px'}}>High Score: {highScore} ({gameParams.name})</p>
+        <button
+            onClick={(e) => { e.stopPropagation(); startGame(); }}
+            style={{padding: '12px 25px', marginTop: '20px', cursor: 'pointer', fontSize: '16px', borderRadius: '5px', border: 'none', backgroundColor: '#007bff', color: 'white'}}
+        >
+            Play Again ({gameParams.name})
+        </button>
+        <button
+            onClick={(e) => { e.stopPropagation(); goToDifficultyScreen(); }}
+            style={{padding: '10px 20px', marginTop: '15px', cursor: 'pointer', fontSize: '14px', borderRadius: '5px', border: '1px solid #007bff', backgroundColor: 'transparent', color: '#007bff'}}
+        >
+            Change Difficulty
+        </button>
+      </div>
+    );
+  }
+
+  if (!isRunning && !gameOver && !showDifficultyScreen) {
     return (
       <div
         ref={gameAreaRef}
@@ -183,41 +286,14 @@ export default function Game() {
         onClick={handleGameAreaClick}
         tabIndex={0}
       >
-        <h2 style={{ marginBottom: '20px', fontSize: '24px' }}>Mini Game!</h2>
+        <h2 style={{ marginBottom: '20px', fontSize: '24px' }}>Mini Game! ({gameParams.name})</h2>
         <p>Press Space or Click to Start/Jump</p>
         <p style={{marginTop: '10px', fontSize: '14px'}}>Jump over social media icons to score.</p>
-      </div>
-    );
-  }
-
-  if (gameOver) {
-    return (
-      <div
-        ref={gameAreaRef}
-        style={{
-            width: '100%',
-            maxWidth: `${gameWidth}px`,
-            height: `${gameHeight}px`,
-            border: '1px solid #ccc',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center',
-            cursor: 'pointer',
-            userSelect: 'none',
-        }}
-        onClick={handleGameAreaClick}
-        tabIndex={0}
+         <button
+            onClick={(e) => { e.stopPropagation(); goToDifficultyScreen(); }}
+            style={{padding: '8px 15px', marginTop: '25px', cursor: 'pointer', fontSize: '12px', borderRadius: '5px', border: '1px solid #ccc', backgroundColor: 'transparent', color: '#555'}}
         >
-        <h2 style={{fontSize: '28px', marginBottom: '10px'}}>Game Over!</h2>
-        <p style={{fontSize: '20px'}}>Your Score: {score}</p>
-        <p style={{fontSize: '18px', marginTop: '5px'}}>High Score: {highScore}</p>
-        <button
-            onClick={startGame}
-            style={{padding: '12px 25px', marginTop: '25px', cursor: 'pointer', fontSize: '16px', borderRadius: '5px', border: 'none', backgroundColor: '#007bff', color: 'white'}}
-        >
-            Play Again
+            Change Difficulty
         </button>
       </div>
     );
@@ -239,17 +315,15 @@ export default function Game() {
         onClick={jump}
         tabIndex={0}
     >
-      {/* Player */}
       <div style={{
         position: 'absolute',
         left: `${playerPos.x}px`,
         top: `${playerPos.y}px`,
         width: `${PLAYER_WIDTH}px`,
         height: `${PLAYER_HEIGHT}px`,
-        backgroundColor: 'deepskyblue', // Changed color
+        backgroundColor: 'deepskyblue',
       }}></div>
 
-      {/* Obstacles */}
       {obstacles.map(obstacle => (
         <div key={obstacle.id} style={{
           position: 'absolute',
@@ -257,21 +331,23 @@ export default function Game() {
           top: `${obstacle.y}px`,
           width: `${OBSTACLE_WIDTH}px`,
           height: `${OBSTACLE_HEIGHT}px`,
-          backgroundColor: obstacle.type === 'YouTube' ? 'red' : obstacle.type === 'TikTok' ? '#00f2ea' : obstacle.type === 'Insta' ? '#C13584' : 'blue', // Color by type
+          backgroundColor: obstacle.type === 'YouTube' ? 'red' : obstacle.type === 'TikTok' ? '#00f2ea' : obstacle.type === 'Insta' ? '#C13584' : 'blue',
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
           fontSize: '10px',
           color: 'white',
-          borderRadius: '4px', // Rounded corners for obstacles
+          borderRadius: '4px',
         }}>
           {obstacle.type}
         </div>
       ))}
 
-      {/* Score */}
       <div style={{ position: 'absolute', top: '10px', left: '10px', fontSize: '22px', fontWeight: 'bold', color: '#333' }}>
         Score: {score}
+      </div>
+      <div style={{ position: 'absolute', top: '35px', left: '10px', fontSize: '16px', color: '#666' }}>
+        Mode: {gameParams.name}
       </div>
       <div style={{ position: 'absolute', top: '10px', right: '10px', fontSize: '18px', color: '#555' }}>
         High Score: {highScore}
