@@ -14,6 +14,7 @@ const SearchTool = lazy(() => import('./pages/tools/SearchTool'));
 const TrendingChecker = lazy(() => import('./pages/tools/TrendingChecker'));
 const VideoSummarizer = lazy(() => import('./pages/tools/VideoSummarizer'));
 const ArabiaCommentMapper = lazy(() => import('./pages/tools/ArabiaCommentMapper'));
+const PubgMiniPage = lazy(() => import('./pages/tools/PubgMiniPage'));
 
 // Loading component
 function LoadingFallback() {
@@ -29,6 +30,17 @@ function App() {
     <AppProvider>
       <Router>
         <Routes>
+          {/* Standalone page route for PUBGMini */}
+          <Route
+            path="tools/pubgmini"
+            element={
+              <Suspense fallback={<LoadingFallback />}>
+                <PubgMiniPage />
+              </Suspense>
+            }
+          />
+
+          {/* Main layout routes */}
           <Route path="/" element={<Layout />}>
             <Route index element={
               <Suspense fallback={<LoadingFallback />}>

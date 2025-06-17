@@ -57,9 +57,9 @@ export default function Sidebar() {
       icon: <MessageSquareText size={20} />
     },
     {
-      name: 'Mini Game',
-      path: '/#mini-game-section',
-      icon: <Gamepad2 size={20} />
+      name: 'PUBGMini', // Renamed
+      path: '/tools/pubgmini', // New path to dedicated page
+      icon: <Gamepad2 size={20} /> // Icon remains
     }
   ];
 

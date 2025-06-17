@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 // Define constants that are not difficulty-dependent
-const PLAYER_WIDTH = 30;
-const PLAYER_HEIGHT = 50;
+const PLAYER_WIDTH = 40;
+const PLAYER_HEIGHT = 40;
 const OBSTACLE_WIDTH = 40;
 const OBSTACLE_HEIGHT = 40;
 const GRAVITY = 0.55; // Slight decrease to make jump feel a bit floatier and longer
@@ -342,7 +342,7 @@ export default function Game() {
         onClick={handleGameAreaClick}
         tabIndex={0}
       >
-        <h2 style={{ marginBottom: '20px', fontSize: '24px' }}>Mini Game! ({gameParams.name})</h2>
+        <h2 style={{ marginBottom: '20px', fontSize: '24px' }}>PUBGMini ({gameParams.name})</h2>
         <p>Press Space or Click to Start/Jump</p>
         <p style={{marginTop: '10px', fontSize: '14px'}}>Jump over social media icons to score.</p>
          <button
