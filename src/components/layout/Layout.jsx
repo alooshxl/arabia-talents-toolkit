@@ -1,7 +1,7 @@
+// src/components/layout/Layout.jsx
 import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
-import Chatbot from '@/components/chatbot/Chatbot'; // Added import
 
 export default function Layout() {
   return (
@@ -13,8 +13,6 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
-      <Chatbot /> {/* Added Chatbot component */}
     </div>
   );
 }
-
