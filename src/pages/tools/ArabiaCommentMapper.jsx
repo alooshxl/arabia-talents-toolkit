@@ -237,6 +237,9 @@ const ArabiaCommentMapper = () => {
       const geminiCommentCount = uniqueCommentTexts.length; // Store count for Gemini analysis
       setGeminiAnalysisCommentCount(geminiCommentCount); // Set state
 
+      console.log('[DEBUG] Number of unique comments for Gemini:', geminiCommentCount);
+      console.log('[DEBUG] First few unique comments:', uniqueCommentTexts.slice(0, 5));
+
       if (geminiApiKey.trim() && geminiCommentCount > 0) { // Use geminiCommentCount here
         const batchPrompt = `You will receive a list of YouTube comments written in Arabic. Analyze these comments and estimate the percentage distribution of the commenters’ countries of origin, focusing on Arabic-speaking countries.
 
@@ -250,20 +253,26 @@ Your output should be a clear list of countries and the estimated percentage of 
 Here is the list of comments:
 ${uniqueCommentTexts.map(text => `- "${text.substring(0, 300)}${text.length > 300 ? '...' : ''}"`).join('\n')}
 `; // Truncate long comments in prompt
+        console.log('[DEBUG] Gemini Batch Prompt:', batchPrompt);
 
         try {
-          console.log("Sending batch request to Gemini API with prompt:", batchPrompt);
+          // console.log("Sending batch request to Gemini API with prompt:", batchPrompt); // Original log
           const batchGeminiResponse = await geminiApiService.generateContent(geminiApiKey, batchPrompt);
+          console.log('[DEBUG] Raw Gemini Batch Response:', batchGeminiResponse);
           setRawGeminiBatchResult(batchGeminiResponse);
-          console.log("Batch Gemini API Response:", batchGeminiResponse);
+          console.log('[DEBUG] setRawGeminiBatchResult called with (success):', batchGeminiResponse);
         } catch (geminiBatchError) {
-          console.error("Gemini API batch request error:", geminiBatchError.message);
+          console.error('[DEBUG] Gemini API batch request error (in catch):', geminiBatchError);
           currentError += `Gemini API batch request error: ${geminiBatchError.message}. `;
-          setRawGeminiBatchResult(`Error: ${geminiBatchError.message}`); // Store error in batch result
+          const errorMessage = `Error: ${geminiBatchError.message}`;
+          setRawGeminiBatchResult(errorMessage);
+          console.log('[DEBUG] setRawGeminiBatchResult called with (error string):', errorMessage);
         }
       } else {
+        console.log('[DEBUG] Skipping Gemini batch call. API Key present:', geminiApiKey.trim(), 'Comment count:', geminiCommentCount);
         setRawGeminiBatchResult(null); // No API key or no unique comments
-        if (geminiApiKey.trim() && uniqueCommentTexts.length === 0) {
+        console.log('[DEBUG] setRawGeminiBatchResult called with (skipped):', null);
+        if (geminiApiKey.trim() && uniqueCommentTexts.length === 0) { // Retain this specific error message
             currentError += 'No unique comment texts found to send to Gemini. ';
         }
       }
