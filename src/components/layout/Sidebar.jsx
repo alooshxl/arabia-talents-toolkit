@@ -6,8 +6,7 @@ import {
   Film, 
   Search, 
   Activity,
-  Sparkles, // Icon for AI Video Summarizer
-  MessageSquareText // Icon for Arabia Comment Mapper
+  Sparkles // Icon for AI Video Summarizer
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -49,11 +48,6 @@ export default function Sidebar() {
       name: 'AI Video Summarizer',
       path: '/tools/video-summarizer',
       icon: <Sparkles size={20} />
-    },
-    {
-      name: 'Arabia Comment Mapper',
-      path: '/tools/arabia-comment-mapper',
-      icon: <MessageSquareText size={20} />
     }
   ];
 
