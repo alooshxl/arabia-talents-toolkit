@@ -7,7 +7,8 @@ import {
   Search, 
   Activity,
   Sparkles, // Icon for AI Video Summarizer
-  MessageSquareText // Icon for Arabia Comment Mapper
+  MessageSquareText, // Icon for Arabia Comment Mapper
+  Gamepad2 // Added Gamepad2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -54,6 +55,11 @@ export default function Sidebar() {
       name: 'Arabia Comment Mapper',
       path: '/tools/arabia-comment-mapper',
       icon: <MessageSquareText size={20} />
+    },
+    {
+      name: 'Mini Game',
+      path: '/#mini-game-section',
+      icon: <Gamepad2 size={20} />
     }
   ];
 

@@ -5,9 +5,12 @@ const PLAYER_WIDTH = 30;
 const PLAYER_HEIGHT = 50;
 const OBSTACLE_WIDTH = 40;
 const OBSTACLE_HEIGHT = 40;
-const GRAVITY = 0.6;
-const BASE_PLAYER_JUMP_VELOCITY = 11; // Base jump velocity, might be adjusted by difficulty
+const GRAVITY = 0.55; // Slight decrease to make jump feel a bit floatier and longer
+const BASE_PLAYER_JUMP_VELOCITY = 15; // Base jump velocity, might be adjusted by difficulty
 const SOCIAL_MEDIA_ICONS = ['YouTube', 'TikTok', 'Insta', 'Facebook'];
+
+const STACKED_GAP = 10;
+const SIDE_BY_SIDE_GAP = 15;
 
 const DIFFICULTY_SETTINGS = {
   easy: { name: 'Easy', speed: 2.5, minInterval: 120, maxInterval: 200, jumpVelocity: BASE_PLAYER_JUMP_VELOCITY },
@@ -117,14 +120,67 @@ export default function Game() {
         if (currentFrames >= nextObstacleIntervalRef.current) {
           currentFrames = 0;
           nextObstacleIntervalRef.current = Math.floor(Math.random() * (gameParams.maxInterval - gameParams.minInterval + 1)) + gameParams.minInterval;
-          const newObstacle = {
-            id: Date.now(),
-            x: gameWidth,
-            y: gameHeight - OBSTACLE_HEIGHT,
-            type: SOCIAL_MEDIA_ICONS[Math.floor(Math.random() * SOCIAL_MEDIA_ICONS.length)],
-            scored: false,
-          };
-          newObstaclesList.push(newObstacle);
+
+          const formationTypeRoll = Math.random();
+          let obstaclesThisSpawn = []; // Changed from newObstacle to an array
+          const baseObstacleY = gameHeight - OBSTACLE_HEIGHT;
+          const iconType1 = SOCIAL_MEDIA_ICONS[Math.floor(Math.random() * SOCIAL_MEDIA_ICONS.length)];
+          const iconType2 = SOCIAL_MEDIA_ICONS[Math.floor(Math.random() * SOCIAL_MEDIA_ICONS.length)];
+
+          // Formation logic (constants STACKED_GAP, SIDE_BY_SIDE_GAP are already defined)
+          if (formationTypeRoll < 0.5 || gameParams.speed < 3) { // ~50% chance for single, or always single if speed is very low (e.g., easy mode)
+            obstaclesThisSpawn.push({
+              id: Date.now(),
+              x: gameWidth,
+              y: baseObstacleY,
+              type: iconType1,
+              scored: false,
+            });
+          } else if (formationTypeRoll < 0.75) { // ~25% chance for side-by-side
+            obstaclesThisSpawn.push({
+              id: Date.now(),
+              x: gameWidth,
+              y: baseObstacleY,
+              type: iconType1,
+              scored: false,
+            });
+            obstaclesThisSpawn.push({
+              id: Date.now() + 1, // Ensure unique ID for the second obstacle
+              x: gameWidth + OBSTACLE_WIDTH + SIDE_BY_SIDE_GAP,
+              y: baseObstacleY,
+              type: iconType2,
+              scored: false,
+            });
+          } else { // ~25% chance for stacked
+            const topObstacleY = baseObstacleY - OBSTACLE_HEIGHT - STACKED_GAP;
+            // Ensure the top obstacle is within game bounds and reachable by the player
+            if (topObstacleY >= 0) {
+                 obstaclesThisSpawn.push({
+                    id: Date.now(),
+                    x: gameWidth,
+                    y: baseObstacleY, // Bottom obstacle
+                    type: iconType1,
+                    scored: false,
+                  });
+                  obstaclesThisSpawn.push({
+                    id: Date.now() + 1, // Ensure unique ID
+                    x: gameWidth, // Same X for stacked
+                    y: topObstacleY, // Top obstacle
+                    type: iconType2,
+                    scored: false,
+                  });
+            } else { // Fallback to a single obstacle if stacked formation is too high (e.g., gameHeight is too small)
+                 obstaclesThisSpawn.push({
+                    id: Date.now(),
+                    x: gameWidth,
+                    y: baseObstacleY,
+                    type: iconType1,
+                    scored: false,
+                  });
+            }
+          }
+
+          newObstaclesList.push(...obstaclesThisSpawn);
         }
         setFramesSinceLastObstacle(currentFrames);
 
@@ -134,7 +190,7 @@ export default function Game() {
             currentScore++;
             obs.scored = true;
           }
-          return obs.x > -OBSTACLE_WIDTH;
+          return obs.x > -(OBSTACLE_WIDTH * 2 + SIDE_BY_SIDE_GAP);
         });
         setScore(currentScore);
         setObstacles(newObstaclesList);
