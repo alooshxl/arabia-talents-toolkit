@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useAppContext } from '@/contexts/AppContext';
@@ -43,6 +44,9 @@ export default function VideoSummarizer() {
   const [videoDescription, setVideoDescription] = useState('');
   const [summary, setSummary] = useState('');
   const [topics, setTopics] = useState('');
+  const [userBrief, setUserBrief] = useState('');
+  const [briefComparisonResult, setBriefComparisonResult] = useState('');
+  const [enhancedSummary, setEnhancedSummary] = useState({ mainTopics: '', subtopics: '', mentions: '', timeline: '' });
   // const [isLoading, setIsLoading] = useState(false); // Removed local loading state
 
   const handleSummarize = async () => {
@@ -57,6 +61,9 @@ export default function VideoSummarizer() {
     setVideoDescription('');
     setSummary('');
     setTopics('');
+    setBriefComparisonResult('');
+    setEnhancedSummary({ mainTopics: '', subtopics: '', mentions: '', timeline: '' });
+    // userBrief is intentionally not reset here as it's a user input
 
     try {
       const videoId = extractVideoIdFromUrl(videoUrl);
@@ -86,64 +93,94 @@ export default function VideoSummarizer() {
         return;
       }
 
-      const prompt = `Analyze the following YouTube video content. Provide a concise summary in 3-5 bullet points and list 5-7 key topics or keywords discussed.
-
-Video Title: ${currentVideoTitle}
+      // Simplified prompt, as the detailed structure is in geminiApiService now
+      const prompt = `Video Title: ${currentVideoTitle}
 
 Video Description:
-${currentVideoDescription}
-
-Format your response clearly with "Summary:" and "Topics:" sections. For example:
-Summary:
-- Point 1
-- Point 2
-
-Topics:
-- Topic 1
-- Topic 2`;
+${currentVideoDescription}`;
 
       try {
-        const responseText = await geminiApiService.generateContent(geminiApiKey, prompt);
+        const responseText = await geminiApiService.generateContent(geminiApiKey, prompt, userBrief);
 
-        let extractedSummary = 'Could not extract summary from AI response.';
-        let extractedTopics = 'Could not extract topics from AI response.';
+        // Helper function to extract content based on markers
+        const extractSection = (text, marker) => {
+          // Regex: marker, then any characters (non-greedy), until next marker or end of string.
+          // Next marker is assumed to be two newlines then a word starting with a capital letter, followed by a colon.
+          // Or, end of string ($).
+          const regex = new RegExp(`^${marker}\\s*(.*?)(?=\\n\\n[A-Z][a-z\\s]*:|$)`, 'ims');
+          const match = text.match(regex);
+          return match && match[1] ? match[1].trim() : 'Not found in response.';
+        };
 
-        const summaryMatch = responseText.match(/Summary:(.*?)Topics:/is);
-        if (summaryMatch && summaryMatch[1]) {
-            extractedSummary = summaryMatch[1].trim();
-            const topicsMatch = responseText.match(/Topics:(.*)/is);
-            if (topicsMatch && topicsMatch[1]) {
-                extractedTopics = topicsMatch[1].trim();
-            } else {
-                 // If topics marker is not found after summary, maybe the rest is topics
-                const potentialTopics = responseText.substring(summaryMatch[0].length).trim();
-                if (potentialTopics) extractedTopics = potentialTopics;
-            }
+        // Fallback for older summary/topics if new ones are not found
+        const extractOldSection = (text, marker, endMarker = null) => {
+            const endMarkerPattern = endMarker ? `(?=\\n\\n${endMarker})` : '$';
+            const regex = new RegExp(`^${marker}\\s*(.*?)${endMarkerPattern}`, 'ims');
+            const match = text.match(regex);
+            return match && match[1] ? match[1].trim() : null;
+        };
+
+
+        if (userBrief && userBrief.trim() !== '') {
+          const parsedEnhancedSummary = extractSection(responseText, 'Enhanced Summary:');
+          const parsedMainTopics = extractSection(responseText, 'Main Topics:');
+          const parsedSubtopics = extractSection(responseText, 'Subtopics:');
+          const parsedMentions = extractSection(responseText, 'Mentions:');
+          const parsedTimeline = extractSection(responseText, 'Timeline:');
+          const parsedBriefComparison = extractSection(responseText, 'Brief Comparison:');
+
+          setSummary(parsedEnhancedSummary);
+          // Set topics to main topics for the "Key Topics" display, and also within enhancedSummary
+          setTopics(parsedMainTopics);
+          setBriefComparisonResult(parsedBriefComparison);
+          setEnhancedSummary({
+            mainTopics: parsedMainTopics,
+            subtopics: parsedSubtopics,
+            mentions: parsedMentions,
+            timeline: parsedTimeline,
+          });
         } else {
-            // Fallback if "Summary:" and "Topics:" markers are not distinct
-            // Check for summary if it's the only thing
-            const simpleSummaryMatch = responseText.match(/Summary:(.*)/is);
-            if (simpleSummaryMatch && simpleSummaryMatch[1]) {
-                extractedSummary = simpleSummaryMatch[1].trim();
-                // Attempt to find topics if summary was the only clear section
-                const topicsAfterSummaryMatch = responseText.substring(simpleSummaryMatch[0].length).trim();
-                if(topicsAfterSummaryMatch.toLowerCase().startsWith("topics:")) {
-                    extractedTopics = topicsAfterSummaryMatch.substring("topics:".length).trim();
-                } else if (topicsAfterSummaryMatch) {
-                    // If there's text after summary but no "Topics:" marker, assign it to topics or summary
-                    // This part can be tricky. For now, let's assume if no clear topic, it might be part of summary or not present.
-                    // Or, assign remaining to topics if summary was short
-                    if (extractedSummary.length < responseText.length / 2 && topicsAfterSummaryMatch.length > 20) { // Heuristic
-                        extractedTopics = topicsAfterSummaryMatch;
-                    }
-                }
-            } else {
-                 // If no "Summary:" marker at all, assign whole response to summary
-                extractedSummary = responseText;
-            }
+          // Original parsing logic if no userBrief was provided
+          let extractedSummary = 'Could not extract summary from AI response.';
+          let extractedTopics = 'Could not extract topics from AI response.';
+
+          // Try to parse Summary: ... Topics: ...
+          const summaryMatch = responseText.match(/Summary:(.*?)Topics:/is);
+          if (summaryMatch && summaryMatch[1]) {
+              extractedSummary = summaryMatch[1].trim();
+              const topicsMatchText = responseText.substring(summaryMatch[0].length); // Text after "Summary:...Topics:"
+              const topicsMatch = topicsMatchText.match(/Topics:(.*)/is);
+              if (topicsMatch && topicsMatch[1]) {
+                  extractedTopics = topicsMatch[1].trim();
+              } else {
+                  extractedTopics = topicsMatchText.trim(); // Assume rest is topics if "Topics:" marker is there but content is tricky
+              }
+          } else {
+              // Fallback if "Summary:" and "Topics:" markers are not distinct or "Topics:" is missing
+              const simpleSummaryMatch = responseText.match(/Summary:(.*)/is);
+              if (simpleSummaryMatch && simpleSummaryMatch[1]) {
+                  extractedSummary = simpleSummaryMatch[1].trim();
+                  // Attempt to find topics if summary was the only clear section
+                  const potentialTopics = responseText.substring(simpleSummaryMatch[0].length).trim();
+                  if (potentialTopics.toLowerCase().startsWith("topics:")) {
+                      extractedTopics = potentialTopics.substring("topics:".length).trim();
+                  } else if (potentialTopics.length > 20) { // Heuristic: if there's significant text after summary
+                      extractedTopics = potentialTopics;
+                  } else {
+                      extractedTopics = "Topics not clearly separated or found."
+                  }
+              } else {
+                   // If no "Summary:" marker at all, assign whole response to summary
+                  extractedSummary = responseText;
+                  extractedTopics = "Topics not found.";
+              }
+          }
+          setSummary(extractedSummary);
+          setTopics(extractedTopics);
+          // Clear other fields that are not applicable when no brief is used
+          setBriefComparisonResult('');
+          setEnhancedSummary({ mainTopics: '', subtopics: '', mentions: '', timeline: '' });
         }
-        setSummary(extractedSummary);
-        setTopics(extractedTopics);
 
       } catch (geminiError) {
         console.error('Gemini API Error:', geminiError);
@@ -181,13 +218,23 @@ Topics:
               className="mt-1"
             />
           </div>
+          <div>
+            <Label htmlFor="userBriefInput">Your Brief/Key Points</Label>
+            <Textarea
+              id="userBriefInput"
+              placeholder="Enter the key points or aspects you expect the video to cover..."
+              value={userBrief}
+              onChange={(e) => setUserBrief(e.target.value)}
+              className="mt-1"
+            />
+          </div>
           <Button onClick={handleSummarize} disabled={isLoading || !videoUrl.trim()} className="w-full sm:w-auto">
             {isLoading ? 'Summarizing...' : 'Summarize Video'}
           </Button>
         </CardContent>
       </Card>
 
-      { !isLoading && (videoTitle || videoDescription || summary || topics) && (
+      { !isLoading && (videoTitle || videoDescription || summary || topics || briefComparisonResult || enhancedSummary.mainTopics || enhancedSummary.subtopics ) && (
         <div className="space-y-6 mt-8">
           <Card>
             <CardHeader><CardTitle>Video Details</CardTitle></CardHeader>
@@ -206,6 +253,35 @@ Topics:
               <p className="text-muted-foreground mb-3 whitespace-pre-wrap">{summary || 'Not generated or not available yet.'}</p>
               <h3 className="font-semibold mb-1">Key Topics:</h3>
               <p className="text-muted-foreground whitespace-pre-wrap">{topics || 'Not generated or not available yet.'}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>Brief Comparison</CardTitle></CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground whitespace-pre-wrap">{briefComparisonResult || 'Not generated or not available yet.'}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>Enhanced Summary Details</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              <div>
+                <h4 className="font-semibold">Main Topics:</h4>
+                <p className="text-muted-foreground whitespace-pre-wrap">{enhancedSummary.mainTopics || 'Not generated or not available yet.'}</p>
+              </div>
+              <div>
+                <h4 className="font-semibold">Subtopics:</h4>
+                <p className="text-muted-foreground whitespace-pre-wrap">{enhancedSummary.subtopics || 'Not generated or not available yet.'}</p>
+              </div>
+              <div>
+                <h4 className="font-semibold">Mentions:</h4>
+                <p className="text-muted-foreground whitespace-pre-wrap">{enhancedSummary.mentions || 'Not generated or not available yet.'}</p>
+              </div>
+              <div>
+                <h4 className="font-semibold">Timeline:</h4>
+                <p className="text-muted-foreground whitespace-pre-wrap">{enhancedSummary.timeline || 'Not generated or not available yet.'}</p>
+              </div>
             </CardContent>
           </Card>
         </div>
