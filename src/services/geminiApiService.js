@@ -4,56 +4,25 @@ class GeminiApiService {
   }
 
   // Method to make requests to the Gemini API
-  async generateContent(apiKey, promptText, userBrief = null) {
+  async generateContent(apiKey, videoDetailsText) { // userBrief parameter removed
     if (!apiKey) {
       throw new Error('Gemini API key is required.');
     }
-    if (!promptText || typeof promptText !== 'string' || promptText.trim() === '') {
-      throw new Error('Prompt text cannot be empty.');
+    if (!videoDetailsText || typeof videoDetailsText !== 'string' || videoDetailsText.trim() === '') {
+      // videoDetailsText is expected to contain "Title: ..." and "Description: ..."
+      throw new Error('Video details text cannot be empty.');
     }
 
-    let finalPromptText = promptText;
+    // New prompt structure
+    const finalPromptText = `You are an assistant that analyzes YouTube videos. Based on the following video title and description, generate a detailed summary of the video's content. Do not suggest alternative titles. Your task is only to summarize.
 
-    if (userBrief && userBrief.trim() !== '') {
-      // Assuming promptText already contains Video Title and Description
-      // as passed from VideoSummarizer.jsx
-      finalPromptText = `Analyze the following YouTube video content based on its title and description. Also, consider the user's brief provided below.
+Provide the summary in two languages:
+1. English summary
+2. Arabic summary
 
-${promptText}
+${videoDetailsText}
 
-User's Brief:
-${userBrief}
-
-Please provide the following:
-1. Enhanced Summary: A detailed and comprehensive summary of the video.
-2. Main Topics: List the main topics discussed.
-3. Subtopics: List any relevant subtopics for each main topic.
-4. Mentions: List any specific names, brands, or events mentioned.
-5. Timeline: If discernible, provide a brief timeline of key moments (e.g., "0:00-1:30 - Introduction to X, 1:30-5:00 - Deep dive on Y").
-6. Brief Comparison: Analyze how well the video content covers the points in the User's Brief. Explicitly state if it 'Successfully Covers', 'Partially Covers', or 'Misses' the key points, and briefly explain why.
-
-Format your response clearly with distinct sections using the following markers:
-Enhanced Summary:
-[Detailed summary here]
-
-Main Topics:
-- [Topic 1]
-- [Topic 2]
-
-Subtopics:
-- [Topic 1]: [Subtopic A, Subtopic B]
-- [Topic 2]: [Subtopic C]
-
-Mentions:
-- [Name/Brand/Event 1]
-- [Name/Brand/Event 2]
-
-Timeline:
-- [Timestamp range] - [Description]
-
-Brief Comparison:
-[Covers/Partially Covers/Misses]: [Explanation]`;
-    }
+Summarize clearly and concisely. Do not include suggestions, headlines, or anything unrelated to the summary itself.`;
 
     const url = `${this.baseUrl}?key=${apiKey}`;
 
@@ -62,7 +31,7 @@ Brief Comparison:
         {
           parts: [
             {
-              text: finalPromptText, // Use the potentially modified prompt
+              text: finalPromptText,
             },
           ],
         },
@@ -72,7 +41,7 @@ Brief Comparison:
       //   temperature: 0.7,
       //   topK: 1,
       //   topP: 1,
-      //   maxOutputTokens: 2048,
+      //   maxOutputTokens: 2048, // Consider if this needs adjustment for dual language summaries
       // },
     };
 
