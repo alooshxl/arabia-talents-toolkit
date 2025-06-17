@@ -1,6 +1,23 @@
 class YouTubeApiService {
   constructor() {
     this.baseUrl = 'https://www.googleapis.com/youtube/v3';
+    this.cache = {};
+    this.cacheDuration = 5 * 60 * 1000; // 5 minutes
+  }
+
+  _getFromCache(key) {
+    const cachedItem = this.cache[key];
+    if (cachedItem && (Date.now() - cachedItem.timestamp < this.cacheDuration)) {
+      return cachedItem.data;
+    }
+    return null;
+  }
+
+  _setCache(key, data) {
+    this.cache[key] = {
+      data: data,
+      timestamp: Date.now()
+    };
   }
 
   getApiKey() {
@@ -124,6 +141,12 @@ class YouTubeApiService {
   }
 
   async getChannelInfo(channelId) {
+    const cacheKey = `channelInfo_${channelId}`;
+    const cachedData = this._getFromCache(cacheKey);
+    if (cachedData) {
+      return cachedData;
+    }
+
     const data = await this.makeRequest('channels', {
       part: 'snippet,statistics,brandingSettings',
       id: channelId
@@ -133,7 +156,9 @@ class YouTubeApiService {
       throw new Error('Channel not found');
     }
 
-    return data.items[0];
+    const channelData = data.items[0];
+    this._setCache(cacheKey, channelData);
+    return channelData;
   }
 
   async getVideoComments(videoId, maxResults = 100) {
@@ -195,6 +220,12 @@ class YouTubeApiService {
   }
 
   async getVideoDetails(videoId) {
+    const cacheKey = `videoDetails_${videoId}`;
+    const cachedData = this._getFromCache(cacheKey);
+    if (cachedData) {
+      return cachedData;
+    }
+
     const data = await this.makeRequest('videos', {
       part: 'snippet,statistics,contentDetails',
       id: videoId
@@ -204,11 +235,19 @@ class YouTubeApiService {
       throw new Error('Video not found');
     }
 
-    return data.items[0];
+    const videoData = data.items[0];
+    this._setCache(cacheKey, videoData);
+    return videoData;
   }
 
   async getMultipleVideoDetails(videoIds) {
     if (!videoIds || videoIds.length === 0) return [];
+
+    const cacheKey = `multipleVideoDetails_${videoIds.join(',')}`;
+    const cachedData = this._getFromCache(cacheKey);
+    if (cachedData) {
+      return cachedData;
+    }
     
     // YouTube API allows up to 50 video IDs per request
     const chunks = [];
@@ -228,10 +267,17 @@ class YouTubeApiService {
       }
     }
 
+    this._setCache(cacheKey, results);
     return results;
   }
 
   async getTrendingVideos(regionCode, categoryId = '20', maxResults = 50) {
+    const cacheKey = `trendingVideos_${regionCode}_${categoryId}_${maxResults}`;
+    const cachedData = this._getFromCache(cacheKey);
+    if (cachedData) {
+      return cachedData;
+    }
+
     const data = await this.makeRequest('videos', {
       part: 'id,snippet,statistics',
       chart: 'mostPopular',
@@ -240,7 +286,9 @@ class YouTubeApiService {
       maxResults: Math.min(maxResults, 50)
     });
 
-    return data.items || [];
+    const trendingData = data.items || [];
+    this._setCache(cacheKey, trendingData);
+    return trendingData;
   }
 
   async searchVideos(query, options = {}) {

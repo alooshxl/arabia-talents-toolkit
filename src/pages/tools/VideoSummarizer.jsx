@@ -58,7 +58,6 @@ export default function VideoSummarizer() {
     setVideoDescription('');
     setEnglishSummary('');
     setArabicSummary('');
-    // userBrief is intentionally not reset here as it's a user input
 
     try {
       const videoId = extractVideoIdFromUrl(videoUrl);

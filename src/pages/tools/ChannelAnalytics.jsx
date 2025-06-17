@@ -2,13 +2,11 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { useAppContext } from '@/contexts/AppContext';
 import youtubeApiService from '@/services/youtubeApi';
-import { formatNumber, formatDate, calculateAverageViews, filterVideosByDateRange } from '@/utils/helpers';
-import { TrendingUp, TrendingDown, Users, Eye, Video, Calendar } from 'lucide-react';
+import { formatNumber } from '@/utils/helpers';
+import { Users, Eye, Video } from 'lucide-react';
 
 export default function ChannelAnalytics() {
   const { setLoading, setError } = useAppContext();

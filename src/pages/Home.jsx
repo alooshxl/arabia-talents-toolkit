@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-// Removed useEffect and useLocation as they are no longer needed after game section removal
 import { 
   BarChart3, 
   GitCompare, 
@@ -13,10 +12,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-// Removed Game import as it's no longer used on Home.jsx
 
 export default function Home() {
-  // Removed const location = useLocation();
   const tools = [
     {
       title: 'Channel Analytics',
@@ -105,20 +102,6 @@ export default function Home() {
           </Card>
         ))}
       </div>
-
-      {/* Mini Game Section */}
-      <div className="mt-12 text-center">
-        <h2 className="text-3xl font-bold mb-4">Try our Mini Game!</h2>
-      </div>
-      <div className="flex justify-center p-4">
-        <Card className="w-full max-w-2xl overflow-hidden">
-          <CardContent className="p-0"> {/* Remove padding if game handles its own */}
-            <Game />
-          </CardContent>
-        </Card>
-      </div>
-      {/* The entire Mini Game section including the div with id="mini-game-section" and its contents has been removed. */}
-      {/* The useEffect hook for scrolling has also been removed. */}
     </div>
   );
 }
