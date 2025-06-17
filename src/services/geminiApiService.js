@@ -112,49 +112,6 @@ Brief Comparison:
       throw new Error(`An unexpected error occurred while calling Gemini API: ${error.message || error}`);
     }
   }
-
-  // New method for chatbot, using the backend proxy
-  async getChatbotResponse(messages) {
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      throw new Error('Messages array cannot be empty.');
-    }
-
-    const proxyUrl = '/api/gemini-proxy'; // URL of our backend proxy
-
-    try {
-      const response = await fetch(proxyUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ messages }), // Send messages in the expected format
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({})); // Try to parse error
-        const errorMessage = errorData?.error || `Chatbot service request failed: ${response.status} ${response.statusText}`;
-        console.error('Chatbot Service Error Data:', errorData);
-        throw new Error(errorMessage);
-      }
-
-      const data = await response.json();
-
-      if (data.reply) {
-        return data.reply; // Expecting { reply: "chatbot's response" }
-      } else {
-        console.error('Unexpected response structure from chatbot service:', data);
-        throw new Error('Failed to extract reply from chatbot service response.');
-      }
-
-    } catch (error) {
-      console.error('Error in getChatbotResponse:', error);
-      // Re-throw the error so it can be caught by the caller
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error(`An unexpected error occurred while calling the chatbot service: ${error.message || error}`);
-    }
-  }
 }
 
 const geminiApiService = new GeminiApiService();
