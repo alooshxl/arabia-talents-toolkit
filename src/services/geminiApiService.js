@@ -1,6 +1,23 @@
 class GeminiApiService {
   constructor() {
     this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent';
+    this.cache = {};
+    this.cacheDuration = 60 * 60 * 1000; // 1 hour
+  }
+
+  _getFromCache(key) {
+    const cachedItem = this.cache[key];
+    if (cachedItem && (Date.now() - cachedItem.timestamp < this.cacheDuration)) {
+      return cachedItem.data;
+    }
+    return null;
+  }
+
+  _setCache(key, data) {
+    this.cache[key] = {
+      data: data,
+      timestamp: Date.now()
+    };
   }
 
   // Method to make requests to the Gemini API
@@ -11,6 +28,12 @@ class GeminiApiService {
     if (!videoDetailsText || typeof videoDetailsText !== 'string' || videoDetailsText.trim() === '') {
       // videoDetailsText is expected to contain "Title: ..." and "Description: ..."
       throw new Error('Video details text cannot be empty.');
+    }
+
+    const cacheKey = `geminiSummary_${videoDetailsText}`;
+    const cachedData = this._getFromCache(cacheKey);
+    if (cachedData) {
+      return cachedData;
     }
 
     // New prompt structure
@@ -65,7 +88,9 @@ Summarize with as much detail as possible from the provided text, ensuring all k
 
       // Basic validation of expected response structure
       if (data.candidates && data.candidates.length > 0 && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts.length > 0) {
-        return data.candidates[0].content.parts[0].text;
+        const responseData = data.candidates[0].content.parts[0].text;
+        this._setCache(cacheKey, responseData);
+        return responseData;
       } else {
         console.error('Unexpected Gemini API response structure:', data);
         throw new Error('Failed to extract content from Gemini API response.');
