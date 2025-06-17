@@ -35,8 +35,11 @@ export const AppProvider = ({ children }) => {
 
     // Update document class for the new theme
     const htmlElement = document.documentElement;
-    htmlElement.classList.remove('dark', 'blue', 'green'); // Remove all possible theme classes
-    if (themeName !== 'light') {
+    // List all theme classes that might need to be removed
+    const allThemeClasses = ['dark', 'blue', 'green', 'theme-purple', 'theme-orange', 'theme-teal', 'theme-crimson', 'theme-forest', 'theme-mono-gray'];
+    htmlElement.classList.remove(...allThemeClasses);
+
+    if (themeName !== 'light') { // 'light' theme doesn't add a class, it relies on default styles
       htmlElement.classList.add(themeName);
     }
   };

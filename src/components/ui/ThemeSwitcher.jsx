@@ -6,6 +6,12 @@ const themes = [
   { name: 'Dark', value: 'dark' },
   { name: 'Blue', value: 'blue' },
   { name: 'Green', value: 'green' },
+  { name: 'Purple', value: 'theme-purple' },
+  { name: 'Orange', value: 'theme-orange' },
+  { name: 'Teal', value: 'theme-teal' },
+  { name: 'Crimson', value: 'theme-crimson' },
+  { name: 'Forest', value: 'theme-forest' },
+  { name: 'Mono Gray', value: 'theme-mono-gray' },
 ];
 
 export const ThemeSwitcher = () => {

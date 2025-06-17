@@ -178,6 +178,217 @@
   --sidebar-ring: oklch(0.5 0.15 130); /* Medium Green */
 }
 
+/* Purple Theme */
+.theme-purple {
+  --background: oklch(0.92 0.04 290); /* Light Lavender */
+  --foreground: oklch(0.15 0.05 290); /* Dark Purple */
+  --card: oklch(0.96 0.03 290); /* Very Light Lavender */
+  --card-foreground: oklch(0.15 0.05 290); /* Dark Purple */
+  --popover: oklch(0.96 0.03 290); /* Very Light Lavender */
+  --popover-foreground: oklch(0.15 0.05 290); /* Dark Purple */
+  --primary: oklch(0.6 0.18 290); /* Medium Purple */
+  --primary-foreground: oklch(0.99 0.02 290); /* Almost White Lavender */
+  --secondary: oklch(0.85 0.06 290); /* Light Medium Purple */
+  --secondary-foreground: oklch(0.15 0.05 290); /* Dark Purple */
+  --muted: oklch(0.88 0.04 290); /* Muted Lavender */
+  --muted-foreground: oklch(0.45 0.05 290); /* Medium Dark Purple */
+  --accent: oklch(0.7 0.15 300); /* Bright Magenta-Purple */
+  --accent-foreground: oklch(0.99 0.02 300); /* Almost White Magenta-Purple */
+  --destructive: oklch(0.577 0.245 27.325); /* Default Red */
+  --border: oklch(0.85 0.04 290 / 50%); /* Transparent Light Purple */
+  --input: oklch(0.85 0.04 290 / 60%); /* Transparent Light Purple */
+  --ring: oklch(0.6 0.18 290); /* Medium Purple */
+  --chart-1: oklch(0.7 0.15 280); /* Purple variant 1 */
+  --chart-2: oklch(0.6 0.15 295); /* Purple variant 2 */
+  --chart-3: oklch(0.5 0.15 270); /* Purple variant 3 */
+  --chart-4: oklch(0.75 0.15 305); /* Purple variant 4 */
+  --chart-5: oklch(0.65 0.15 285); /* Purple variant 5 */
+  --sidebar: oklch(0.96 0.03 290); /* Very Light Lavender (Sidebar) */
+  --sidebar-foreground: oklch(0.15 0.05 290); /* Dark Purple (Sidebar) */
+  --sidebar-primary: oklch(0.6 0.18 290); /* Medium Purple (Sidebar) */
+  --sidebar-primary-foreground: oklch(0.99 0.02 290); /* Almost White Lavender (Sidebar) */
+  --sidebar-accent: oklch(0.7 0.15 300); /* Bright Magenta-Purple (Sidebar) */
+  --sidebar-accent-foreground: oklch(0.99 0.02 300); /* Almost White Magenta-Purple (Sidebar) */
+  --sidebar-border: oklch(0.88 0.04 290 / 50%); /* Transparent Muted Lavender (Sidebar) */
+  --sidebar-ring: oklch(0.6 0.18 290); /* Medium Purple (Sidebar) */
+}
+
+/* Orange Theme */
+.theme-orange {
+  --background: oklch(0.95 0.05 50); /* Light Peach */
+  --foreground: oklch(0.2 0.1 40); /* Dark Brown-Orange */
+  --card: oklch(0.98 0.03 50); /* Very Light Peach */
+  --card-foreground: oklch(0.2 0.1 40); /* Dark Brown-Orange */
+  --popover: oklch(0.98 0.03 50); /* Very Light Peach */
+  --popover-foreground: oklch(0.2 0.1 40); /* Dark Brown-Orange */
+  --primary: oklch(0.7 0.2 50); /* Medium Orange */
+  --primary-foreground: oklch(0.99 0.02 30); /* Almost White (Warm) */
+  --secondary: oklch(0.9 0.1 50); /* Light Medium Orange */
+  --secondary-foreground: oklch(0.2 0.1 40); /* Dark Brown-Orange */
+  --muted: oklch(0.92 0.07 50); /* Muted Peach */
+  --muted-foreground: oklch(0.5 0.1 40); /* Medium Brown-Orange */
+  --accent: oklch(0.75 0.18 40); /* Bright Orange-Red */
+  --accent-foreground: oklch(0.99 0.02 30); /* Almost White (Warm) */
+  --destructive: oklch(0.577 0.245 27.325); /* Default Red */
+  --border: oklch(0.9 0.05 50 / 50%); /* Transparent Light Peach */
+  --input: oklch(0.9 0.05 50 / 60%); /* Transparent Light Peach */
+  --ring: oklch(0.7 0.2 50); /* Medium Orange */
+  --chart-1: oklch(0.7 0.18 40); /* Orange variant 1 */
+  --chart-2: oklch(0.6 0.18 55); /* Orange variant 2 */
+  --chart-3: oklch(0.75 0.18 30); /* Orange variant 3 */
+  --chart-4: oklch(0.8 0.18 60); /* Orange variant 4 */
+  --chart-5: oklch(0.65 0.18 45); /* Orange variant 5 */
+  --sidebar: oklch(0.98 0.03 50); /* Very Light Peach (Sidebar) */
+  --sidebar-foreground: oklch(0.2 0.1 40); /* Dark Brown-Orange (Sidebar) */
+  --sidebar-primary: oklch(0.7 0.2 50); /* Medium Orange (Sidebar) */
+  --sidebar-primary-foreground: oklch(0.99 0.02 30); /* Almost White (Warm) (Sidebar) */
+  --sidebar-accent: oklch(0.75 0.18 40); /* Bright Orange-Red (Sidebar) */
+  --sidebar-accent-foreground: oklch(0.99 0.02 30); /* Almost White (Warm) (Sidebar) */
+  --sidebar-border: oklch(0.92 0.07 50 / 50%); /* Transparent Muted Peach (Sidebar) */
+  --sidebar-ring: oklch(0.7 0.2 50); /* Medium Orange (Sidebar) */
+}
+
+/* Teal Theme */
+.theme-teal {
+  --background: oklch(0.93 0.03 190); /* Light Cyan-Teal */
+  --foreground: oklch(0.15 0.05 180); /* Dark Teal */
+  --card: oklch(0.97 0.02 190); /* Very Light Cyan-Teal */
+  --card-foreground: oklch(0.15 0.05 180); /* Dark Teal */
+  --popover: oklch(0.97 0.02 190); /* Very Light Cyan-Teal */
+  --popover-foreground: oklch(0.15 0.05 180); /* Dark Teal */
+  --primary: oklch(0.6 0.15 180); /* Medium Teal */
+  --primary-foreground: oklch(0.99 0.01 190); /* Almost White Cyan-Teal */
+  --secondary: oklch(0.88 0.05 190); /* Light Medium Teal */
+  --secondary-foreground: oklch(0.15 0.05 180); /* Dark Teal */
+  --muted: oklch(0.9 0.03 190); /* Muted Cyan-Teal */
+  --muted-foreground: oklch(0.45 0.04 180); /* Medium Dark Teal */
+  --accent: oklch(0.65 0.13 195); /* Bright Cyan */
+  --accent-foreground: oklch(0.05 0.02 180); /* Very Dark Teal for contrast */
+  --destructive: oklch(0.577 0.245 27.325); /* Default Red */
+  --border: oklch(0.88 0.03 190 / 50%); /* Transparent Light Teal */
+  --input: oklch(0.88 0.03 190 / 60%); /* Transparent Light Teal */
+  --ring: oklch(0.6 0.15 180); /* Medium Teal */
+  --chart-1: oklch(0.65 0.13 170); /* Teal variant 1 */
+  --chart-2: oklch(0.55 0.13 190); /* Teal variant 2 */
+  --chart-3: oklch(0.7 0.13 160); /* Teal variant 3 */
+  --chart-4: oklch(0.5 0.13 200); /* Teal variant 4 */
+  --chart-5: oklch(0.75 0.13 175); /* Teal variant 5 */
+  --sidebar: oklch(0.97 0.02 190); /* Very Light Cyan-Teal (Sidebar) */
+  --sidebar-foreground: oklch(0.15 0.05 180); /* Dark Teal (Sidebar) */
+  --sidebar-primary: oklch(0.6 0.15 180); /* Medium Teal (Sidebar) */
+  --sidebar-primary-foreground: oklch(0.99 0.01 190); /* Almost White Cyan-Teal (Sidebar) */
+  --sidebar-accent: oklch(0.65 0.13 195); /* Bright Cyan (Sidebar) */
+  --sidebar-accent-foreground: oklch(0.05 0.02 180); /* Very Dark Teal for contrast (Sidebar) */
+  --sidebar-border: oklch(0.9 0.03 190 / 50%); /* Transparent Muted Cyan-Teal (Sidebar) */
+  --sidebar-ring: oklch(0.6 0.15 180); /* Medium Teal (Sidebar) */
+}
+
+/* Crimson Theme */
+.theme-crimson {
+  --background: oklch(0.9 0.03 15); /* Light Rosy Brown */
+  --foreground: oklch(0.15 0.08 10); /* Deep Crimson Red */
+  --card: oklch(0.95 0.02 15); /* Very Light Rosy Brown */
+  --card-foreground: oklch(0.15 0.08 10); /* Deep Crimson Red */
+  --popover: oklch(0.95 0.02 15); /* Very Light Rosy Brown */
+  --popover-foreground: oklch(0.15 0.08 10); /* Deep Crimson Red */
+  --primary: oklch(0.55 0.2 15); /* Medium Crimson */
+  --primary-foreground: oklch(0.98 0.02 350); /* Almost White (Warm Pinkish) */
+  --secondary: oklch(0.82 0.07 15); /* Light Medium Crimson */
+  --secondary-foreground: oklch(0.15 0.08 10); /* Deep Crimson Red */
+  --muted: oklch(0.85 0.05 15); /* Muted Rosy Brown */
+  --muted-foreground: oklch(0.4 0.06 10); /* Medium Dark Crimson */
+  --accent: oklch(0.6 0.18 10); /* Bright Deep Red */
+  --accent-foreground: oklch(0.98 0.02 350); /* Almost White (Warm Pinkish) */
+  --destructive: oklch(0.5 0.22 20); /* Slightly brighter destructive red */
+  --border: oklch(0.82 0.05 15 / 50%); /* Transparent Light Crimson */
+  --input: oklch(0.82 0.05 15 / 60%); /* Transparent Light Crimson */
+  --ring: oklch(0.55 0.2 15); /* Medium Crimson */
+  --chart-1: oklch(0.6 0.18 10); /* Crimson variant 1 */
+  --chart-2: oklch(0.5 0.18 25); /* Crimson variant 2 (more towards red-orange) */
+  --chart-3: oklch(0.65 0.18 5); /* Crimson variant 3 (deeper red) */
+  --chart-4: oklch(0.7 0.18 350);/* Crimson variant 4 (pinkish red) */
+  --chart-5: oklch(0.55 0.18 20); /* Crimson variant 5 */
+  --sidebar: oklch(0.95 0.02 15); /* Very Light Rosy Brown (Sidebar) */
+  --sidebar-foreground: oklch(0.15 0.08 10); /* Deep Crimson Red (Sidebar) */
+  --sidebar-primary: oklch(0.55 0.2 15); /* Medium Crimson (Sidebar) */
+  --sidebar-primary-foreground: oklch(0.98 0.02 350); /* Almost White (Warm Pinkish) (Sidebar) */
+  --sidebar-accent: oklch(0.6 0.18 10); /* Bright Deep Red (Sidebar) */
+  --sidebar-accent-foreground: oklch(0.98 0.02 350); /* Almost White (Warm Pinkish) (Sidebar) */
+  --sidebar-border: oklch(0.85 0.05 15 / 50%); /* Transparent Muted Rosy Brown (Sidebar) */
+  --sidebar-ring: oklch(0.55 0.2 15); /* Medium Crimson (Sidebar) */
+}
+
+/* Forest Theme */
+.theme-forest {
+  --background: oklch(0.92 0.025 110); /* Light Earthy Green-Yellow */
+  --foreground: oklch(0.18 0.05 90); /* Dark Olive Green */
+  --card: oklch(0.96 0.02 110); /* Very Light Earthy Green-Yellow */
+  --card-foreground: oklch(0.18 0.05 90); /* Dark Olive Green */
+  --popover: oklch(0.96 0.02 110); /* Very Light Earthy Green-Yellow */
+  --popover-foreground: oklch(0.18 0.05 90); /* Dark Olive Green */
+  --primary: oklch(0.55 0.12 100); /* Medium Forest Green */
+  --primary-foreground: oklch(0.98 0.01 120); /* Almost White (Light Greenish) */
+  --secondary: oklch(0.85 0.04 110); /* Light Medium Earthy Green */
+  --secondary-foreground: oklch(0.18 0.05 90); /* Dark Olive Green */
+  --muted: oklch(0.88 0.03 105); /* Muted Earthy Green */
+  --muted-foreground: oklch(0.45 0.04 95); /* Medium Dark Olive/Brown */
+  --accent: oklch(0.6 0.1 80); /* Earthy Brown */
+  --accent-foreground: oklch(0.98 0.01 120); /* Almost White (Light Greenish) */
+  --destructive: oklch(0.577 0.245 27.325); /* Default Red */
+  --border: oklch(0.85 0.03 105 / 50%); /* Transparent Light Earthy Green */
+  --input: oklch(0.85 0.03 105 / 60%); /* Transparent Light Earthy Green */
+  --ring: oklch(0.55 0.12 100); /* Medium Forest Green */
+  --chart-1: oklch(0.6 0.1 90); /* Forest Green variant 1 */
+  --chart-2: oklch(0.5 0.1 110); /* Forest Green variant 2 */
+  --chart-3: oklch(0.65 0.08 70); /* Brown variant */
+  --chart-4: oklch(0.7 0.12 120); /* Lighter Green variant */
+  --chart-5: oklch(0.55 0.09 80); /* Darker Brown variant */
+  --sidebar: oklch(0.96 0.02 110); /* Very Light Earthy Green-Yellow (Sidebar) */
+  --sidebar-foreground: oklch(0.18 0.05 90); /* Dark Olive Green (Sidebar) */
+  --sidebar-primary: oklch(0.55 0.12 100); /* Medium Forest Green (Sidebar) */
+  --sidebar-primary-foreground: oklch(0.98 0.01 120); /* Almost White (Light Greenish) (Sidebar) */
+  --sidebar-accent: oklch(0.6 0.1 80); /* Earthy Brown (Sidebar) */
+  --sidebar-accent-foreground: oklch(0.98 0.01 120); /* Almost White (Light Greenish) (Sidebar) */
+  --sidebar-border: oklch(0.88 0.03 105 / 50%); /* Transparent Muted Earthy Green (Sidebar) */
+  --sidebar-ring: oklch(0.55 0.12 100); /* Medium Forest Green (Sidebar) */
+}
+
+/* Monochrome Gray Theme */
+.theme-mono-gray {
+  --background: oklch(0.95 0 0); /* Light Gray */
+  --foreground: oklch(0.15 0 0); /* Dark Gray */
+  --card: oklch(0.98 0 0); /* Very Light Gray */
+  --card-foreground: oklch(0.15 0 0); /* Dark Gray */
+  --popover: oklch(0.98 0 0); /* Very Light Gray */
+  --popover-foreground: oklch(0.15 0 0); /* Dark Gray */
+  --primary: oklch(0.5 0 0); /* Medium Gray */
+  --primary-foreground: oklch(1 0 0); /* White */
+  --secondary: oklch(0.85 0 0); /* Light Medium Gray */
+  --secondary-foreground: oklch(0.15 0 0); /* Dark Gray */
+  --muted: oklch(0.9 0 0); /* Muted Light Gray */
+  --muted-foreground: oklch(0.45 0 0); /* Medium Dark Gray */
+  --accent: oklch(0.6 0 0); /* Medium-Dark Gray */
+  --accent-foreground: oklch(1 0 0); /* White */
+  --destructive: oklch(0.577 0.245 27.325); /* Default Red (for destructive actions) */
+  --border: oklch(0.85 0 0 / 50%); /* Transparent Light Gray */
+  --input: oklch(0.85 0 0 / 60%); /* Transparent Light Gray */
+  --ring: oklch(0.5 0 0); /* Medium Gray */
+  --chart-1: oklch(0.7 0 0); /* Gray variant 1 */
+  --chart-2: oklch(0.6 0 0); /* Gray variant 2 */
+  --chart-3: oklch(0.5 0 0); /* Gray variant 3 */
+  --chart-4: oklch(0.4 0 0); /* Gray variant 4 */
+  --chart-5: oklch(0.3 0 0); /* Gray variant 5 */
+  --sidebar: oklch(0.25 0 0); /* Dark Gray (Sidebar) */
+  --sidebar-foreground: oklch(0.95 0 0); /* Light Gray (Sidebar) */
+  --sidebar-primary: oklch(0.5 0 0); /* Medium Gray (Sidebar) */
+  --sidebar-primary-foreground: oklch(1 0 0); /* White (Sidebar) */
+  --sidebar-accent: oklch(0.6 0 0); /* Medium-Dark Gray (Sidebar) */
+  --sidebar-accent-foreground: oklch(1 0 0); /* White (Sidebar) */
+  --sidebar-border: oklch(0.4 0 0 / 50%); /* Transparent Medium Gray (Sidebar) */
+  --sidebar-ring: oklch(0.5 0 0); /* Medium Gray (Sidebar) */
+}
+
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
