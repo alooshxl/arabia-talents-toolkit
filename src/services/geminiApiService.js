@@ -4,12 +4,55 @@ class GeminiApiService {
   }
 
   // Method to make requests to the Gemini API
-  async generateContent(apiKey, promptText) {
+  async generateContent(apiKey, promptText, userBrief = null) {
     if (!apiKey) {
       throw new Error('Gemini API key is required.');
     }
     if (!promptText || typeof promptText !== 'string' || promptText.trim() === '') {
       throw new Error('Prompt text cannot be empty.');
+    }
+
+    let finalPromptText = promptText;
+
+    if (userBrief && userBrief.trim() !== '') {
+      // Assuming promptText already contains Video Title and Description
+      // as passed from VideoSummarizer.jsx
+      finalPromptText = `Analyze the following YouTube video content based on its title and description. Also, consider the user's brief provided below.
+
+${promptText}
+
+User's Brief:
+${userBrief}
+
+Please provide the following:
+1. Enhanced Summary: A detailed and comprehensive summary of the video.
+2. Main Topics: List the main topics discussed.
+3. Subtopics: List any relevant subtopics for each main topic.
+4. Mentions: List any specific names, brands, or events mentioned.
+5. Timeline: If discernible, provide a brief timeline of key moments (e.g., "0:00-1:30 - Introduction to X, 1:30-5:00 - Deep dive on Y").
+6. Brief Comparison: Analyze how well the video content covers the points in the User's Brief. Explicitly state if it 'Successfully Covers', 'Partially Covers', or 'Misses' the key points, and briefly explain why.
+
+Format your response clearly with distinct sections using the following markers:
+Enhanced Summary:
+[Detailed summary here]
+
+Main Topics:
+- [Topic 1]
+- [Topic 2]
+
+Subtopics:
+- [Topic 1]: [Subtopic A, Subtopic B]
+- [Topic 2]: [Subtopic C]
+
+Mentions:
+- [Name/Brand/Event 1]
+- [Name/Brand/Event 2]
+
+Timeline:
+- [Timestamp range] - [Description]
+
+Brief Comparison:
+[Covers/Partially Covers/Misses]: [Explanation]`;
     }
 
     const url = `${this.baseUrl}?key=${apiKey}`;
@@ -19,7 +62,7 @@ class GeminiApiService {
         {
           parts: [
             {
-              text: promptText,
+              text: finalPromptText, // Use the potentially modified prompt
             },
           ],
         },
