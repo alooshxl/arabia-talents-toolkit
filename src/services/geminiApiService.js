@@ -14,7 +14,7 @@ class GeminiApiService {
     }
 
     // New prompt structure
-    const finalPromptText = `You are an assistant that analyzes YouTube videos. Based on the following video title and description, generate a detailed summary of the video's content. Do not suggest alternative titles. Your task is only to summarize.
+    const finalPromptText = `You are an assistant that analyzes YouTube videos. Based on the following video title and description, generate a comprehensive and highly detailed summary of the video's content. Do not suggest alternative titles. Your task is only to summarize.
 
 Provide the summary in two languages:
 1. English summary
@@ -22,7 +22,7 @@ Provide the summary in two languages:
 
 ${videoDetailsText}
 
-Summarize clearly and concisely. Do not include suggestions, headlines, or anything unrelated to the summary itself.`;
+Summarize with as much detail as possible from the provided text, ensuring all key points and supporting information are included. The summary should be thorough and exhaustive. Do not include suggestions, headlines, or anything unrelated to the summary itself.`;
 
     const url = `${this.baseUrl}?key=${apiKey}`;
 
