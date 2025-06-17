@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 import { 
   BarChart3, 
   GitCompare, 
@@ -15,6 +16,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import Game from '@/components/game/Game.jsx';
 
 export default function Home() {
+  const location = useLocation();
   const tools = [
     {
       title: 'Channel Analytics',
@@ -114,6 +116,61 @@ export default function Home() {
             <Game />
           </CardContent>
         </Card>
+      </div>
+    </div>
+  );
+
+  useEffect(() => {
+    if (location.hash === '#mini-game-section') {
+      const gameSection = document.getElementById('mini-game-section');
+      if (gameSection) {
+        gameSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }, [location.hash]); // Re-run when hash changes
+
+  return (
+    <div className="container mx-auto">
+      <div className="text-center mb-12">
+        <h1 className="text-4xl font-bold mb-4">Arabia Talents YouTube Toolkit</h1>
+        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+          A comprehensive suite of tools for YouTube channel and video analytics, designed for Arabia Talents.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {tools.map((tool) => (
+          <Card key={tool.path} className="overflow-hidden">
+            <CardHeader className="pb-2">
+              <div className={`w-12 h-12 rounded-lg flex items-center justify-center mb-2 ${tool.color}`}>
+                {tool.icon}
+              </div>
+              <CardTitle>{tool.title}</CardTitle>
+              <CardDescription>{tool.description}</CardDescription>
+            </CardHeader>
+            <CardFooter>
+              <Button asChild className="w-full">
+                <Link to={tool.path} className="flex items-center justify-center gap-2">
+                  Open Tool <ArrowRight size={16} />
+                </Link>
+              </Button>
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
+
+      {/* Mini Game Section */}
+      <div id="mini-game-section" className="mt-12 scroll-mt-16"> {/* Added ID and scroll margin */}
+        <div className="text-center mb-4">
+          <h2 className="text-3xl font-bold">Try our Mini Game!</h2>
+        </div>
+        <div className="flex justify-center p-4">
+          <Card className="w-full max-w-2xl overflow-hidden">
+            <CardContent className="p-0"> {/* Remove padding if game handles its own */}
+              <Game />
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
