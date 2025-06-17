@@ -102,8 +102,7 @@ ${currentVideoDescription}`;
 
         // Regex to find "1. English summary" followed by its content,
         // until "2. Arabic summary" or end of string.
-        const englishMatch = responseText.match(/1\.\s*English summary\s*([\s\S]*?)(?=
-*2\.\s*Arabic summary|$)/i);
+        const englishMatch = responseText.match(/1\.\s*English summary\s*([\s\S]*?)(?=\s*2\.\s*Arabic summary|$)/i);
         if (englishMatch && englishMatch[1]) {
           parsedEnglishSummary = englishMatch[1].trim();
         }
