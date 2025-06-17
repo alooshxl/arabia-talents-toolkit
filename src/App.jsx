@@ -30,16 +30,6 @@ function App() {
     <AppProvider>
       <Router>
         <Routes>
-          {/* Standalone page route for PUBGMini */}
-          <Route
-            path="tools/pubgmini"
-            element={
-              <Suspense fallback={<LoadingFallback />}>
-                <PubgMiniPage />
-              </Suspense>
-            }
-          />
-
           {/* Main layout routes */}
           <Route path="/" element={<Layout />}>
             <Route index element={
@@ -85,6 +75,11 @@ function App() {
             <Route path="tools/arabia-comment-mapper" element={
               <Suspense fallback={<LoadingFallback />}>
                 <ArabiaCommentMapper />
+              </Suspense>
+            } />
+            <Route path="tools/pubgmini" element={
+              <Suspense fallback={<LoadingFallback />}>
+                <PubgMiniPage />
               </Suspense>
             } />
             <Route path="*" element={<Navigate to="/" replace />} />
