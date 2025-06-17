@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useAppContext } from '@/contexts/AppContext';
 import youtubeApiService from '@/services/youtubeApi';
 import geminiApiService from '@/services/geminiApiService';
@@ -41,8 +42,11 @@ export default function VideoSummarizer() {
   const [videoUrl, setVideoUrl] = useState('');
   const [videoTitle, setVideoTitle] = useState('');
   const [videoDescription, setVideoDescription] = useState('');
-  const [summary, setSummary] = useState('');
-  const [topics, setTopics] = useState('');
+  // const [summary, setSummary] = useState(''); // Remove this
+  const [arabicSummary, setArabicSummary] = useState(''); // New state for Arabic summary
+  const [topics, setTopics] = useState(''); // Keep for key topics
+  const [briefComparisonAnalysis, setBriefComparisonAnalysis] = useState(''); // New state for brief analysis
+  const [videoBrief, setVideoBrief] = useState('');
   // const [isLoading, setIsLoading] = useState(false); // Removed local loading state
 
   const handleSummarize = async () => {
@@ -55,8 +59,10 @@ export default function VideoSummarizer() {
     setError(null);
     setVideoTitle('');
     setVideoDescription('');
-    setSummary('');
-    setTopics('');
+    // setSummary(''); // Update for new state variable
+    setArabicSummary('');
+    setTopics(''); // Assuming topics are still cleared
+    setBriefComparisonAnalysis('');
 
     try {
       const videoId = extractVideoIdFromUrl(videoUrl);
@@ -86,64 +92,65 @@ export default function VideoSummarizer() {
         return;
       }
 
-      const prompt = `Analyze the following YouTube video content. Provide a concise summary in 3-5 bullet points and list 5-7 key topics or keywords discussed.
+      // New enhanced prompt construction
+      let prompt = `يرجى تحليل محتوى فيديو يوتيوب التالي وتقديم ما يلي:
 
-Video Title: ${currentVideoTitle}
+1.  **ملخص الفيديو**: قدم ملخصًا باللغة العربية يتكون من 8 إلى 10 نقاط غنية بالتفاصيل.
+2.  **النقاط الرئيسية**: حدد 5 إلى 7 مواضيع رئيسية أو كلمات مفتاحية تمت مناقشتها في الفيديو.
 
-Video Description:
+تفاصيل الفيديو:
+العنوان: ${currentVideoTitle}
+الوصف:
 ${currentVideoDescription}
+`;
 
-Format your response clearly with "Summary:" and "Topics:" sections. For example:
-Summary:
-- Point 1
-- Point 2
+      if (videoBrief && videoBrief.trim() !== '') {
+        prompt += `
 
-Topics:
-- Topic 1
-- Topic 2`;
+3.  **تحليل التوافق مع الموجز**: يرجى مقارنة الملخص الذي أنشأته أعلاه (أو محتوى الفيديو بناءً على العنوان والوصف) مع الموجز التالي المقدم من المستخدم. قم بتحليل مدى توافق محتوى الفيديو مع هذا الموجز، مع إبراز نقاط التوافق والاختلاف الرئيسية.
+الموجز المقدم من المستخدم:
+${videoBrief}
+`;
+      }
 
       try {
-        const responseText = await geminiApiService.generateContent(geminiApiKey, prompt);
+        const geminiResponse = await geminiApiService.generateContent(geminiApiKey, prompt);
 
-        let extractedSummary = 'Could not extract summary from AI response.';
-        let extractedTopics = 'Could not extract topics from AI response.';
+        let extractedSummary = 'لم يتمكن من استخلاص الملخص.';
+        let extractedTopics = 'لم يتمكن من استخلاص النقاط الرئيسية.';
+        let extractedBriefAnalysis = ''; // Default to empty if no brief was provided or not found
 
-        const summaryMatch = responseText.match(/Summary:(.*?)Topics:/is);
+        // Improved Regex: Optional numbering (e.g., "1."), optional bolding, flexible spacing around colon.
+        // Captures content until the next section marker or end of string.
+        const summaryRegex = /(?:1\.\s*)?(?:\*\*| *)ملخص الفيديو(?:\*\*| *)\s*:(.*?)(?=(?:2\.\s*)?(?:\*\*| *)النقاط الرئيسية(?:\*\*| *)\s*[:]|(?:3\.\s*)?(?:\*\*| *)تحليل التوافق مع الموجز(?:\*\*| *)\s*[:]| $)/is; // Corrected L$ to $
+        const summaryMatch = geminiResponse.match(summaryRegex);
         if (summaryMatch && summaryMatch[1]) {
-            extractedSummary = summaryMatch[1].trim();
-            const topicsMatch = responseText.match(/Topics:(.*)/is);
-            if (topicsMatch && topicsMatch[1]) {
-                extractedTopics = topicsMatch[1].trim();
-            } else {
-                 // If topics marker is not found after summary, maybe the rest is topics
-                const potentialTopics = responseText.substring(summaryMatch[0].length).trim();
-                if (potentialTopics) extractedTopics = potentialTopics;
-            }
-        } else {
-            // Fallback if "Summary:" and "Topics:" markers are not distinct
-            // Check for summary if it's the only thing
-            const simpleSummaryMatch = responseText.match(/Summary:(.*)/is);
-            if (simpleSummaryMatch && simpleSummaryMatch[1]) {
-                extractedSummary = simpleSummaryMatch[1].trim();
-                // Attempt to find topics if summary was the only clear section
-                const topicsAfterSummaryMatch = responseText.substring(simpleSummaryMatch[0].length).trim();
-                if(topicsAfterSummaryMatch.toLowerCase().startsWith("topics:")) {
-                    extractedTopics = topicsAfterSummaryMatch.substring("topics:".length).trim();
-                } else if (topicsAfterSummaryMatch) {
-                    // If there's text after summary but no "Topics:" marker, assign it to topics or summary
-                    // This part can be tricky. For now, let's assume if no clear topic, it might be part of summary or not present.
-                    // Or, assign remaining to topics if summary was short
-                    if (extractedSummary.length < responseText.length / 2 && topicsAfterSummaryMatch.length > 20) { // Heuristic
-                        extractedTopics = topicsAfterSummaryMatch;
-                    }
-                }
-            } else {
-                 // If no "Summary:" marker at all, assign whole response to summary
-                extractedSummary = responseText;
-            }
+          extractedSummary = summaryMatch[1].trim();
         }
-        setSummary(extractedSummary);
+
+        const topicsRegex = /(?:2\.\s*)?(?:\*\*| *)النقاط الرئيسية(?:\*\*| *)\s*:(.*?)(?=(?:3\.\s*)?(?:\*\*| *)تحليل التوافق مع الموجز(?:\*\*| *)\s*[:]| $)/is; // Corrected L$ to $
+        const topicsMatch = geminiResponse.match(topicsRegex);
+        if (topicsMatch && topicsMatch[1]) {
+          extractedTopics = topicsMatch[1].trim();
+        }
+
+        // If a video brief was sent, try to extract the brief analysis part
+        if (videoBrief && videoBrief.trim() !== '') {
+          extractedBriefAnalysis = 'لم يتمكن من استخلاص تحليل التوافق مع الموجز.'; // Default if section expected but not found
+          const briefAnalysisRegex = /(?:3\.\s*)?(?:\*\*| *)تحليل التوافق مع الموجز(?:\*\*| *)\s*:(.*)/is;
+          const briefAnalysisMatch = geminiResponse.match(briefAnalysisRegex);
+          if (briefAnalysisMatch && briefAnalysisMatch[1]) {
+            extractedBriefAnalysis = briefAnalysisMatch[1].trim();
+          }
+        }
+
+        setArabicSummary(extractedSummary);
         setTopics(extractedTopics);
+        if (videoBrief && videoBrief.trim() !== '') { // Only set if brief was sent
+            setBriefComparisonAnalysis(extractedBriefAnalysis);
+        } else {
+            setBriefComparisonAnalysis(''); // Clear it if no brief was sent
+        }
 
       } catch (geminiError) {
         console.error('Gemini API Error:', geminiError);
@@ -181,13 +188,24 @@ Topics:
               className="mt-1"
             />
           </div>
+          <div>
+            <Label htmlFor="videoBriefInput">Video Brief (Optional)</Label>
+            <Textarea
+              id="videoBriefInput"
+              placeholder="Paste an optional brief for the video content here. The AI will compare its summary against this brief."
+              value={videoBrief}
+              onChange={(e) => setVideoBrief(e.target.value)}
+              className="mt-1"
+              rows={4}
+            />
+          </div>
           <Button onClick={handleSummarize} disabled={isLoading || !videoUrl.trim()} className="w-full sm:w-auto">
             {isLoading ? 'Summarizing...' : 'Summarize Video'}
           </Button>
         </CardContent>
       </Card>
 
-      { !isLoading && (videoTitle || videoDescription || summary || topics) && (
+      { !isLoading && (videoTitle || videoDescription || arabicSummary || topics || briefComparisonAnalysis) && (
         <div className="space-y-6 mt-8">
           <Card>
             <CardHeader><CardTitle>Video Details</CardTitle></CardHeader>
@@ -202,12 +220,23 @@ Topics:
           <Card>
             <CardHeader><CardTitle>AI Generated Content</CardTitle></CardHeader>
             <CardContent>
-              <h3 className="font-semibold mb-1">Summary:</h3>
-              <p className="text-muted-foreground mb-3 whitespace-pre-wrap">{summary || 'Not generated or not available yet.'}</p>
-              <h3 className="font-semibold mb-1">Key Topics:</h3>
-              <p className="text-muted-foreground whitespace-pre-wrap">{topics || 'Not generated or not available yet.'}</p>
+              <h3 className="font-semibold mb-1 text-lg">ملخص الفيديو (Arabic Summary):</h3>
+              <p className="text-muted-foreground mb-3 whitespace-pre-wrap" dir="rtl">{arabicSummary || 'لم يتم إنشاؤها أو غير متوفرة بعد.'}</p>
+
+              <h3 className="font-semibold mb-1 text-lg">النقاط الرئيسية (Key Topics):</h3>
+              <p className="text-muted-foreground whitespace-pre-wrap" dir="rtl">{topics || 'لم يتم إنشاؤها أو غير متوفرة بعد.'}</p>
             </CardContent>
           </Card>
+
+          {videoBrief && videoBrief.trim() !== '' && briefComparisonAnalysis && (
+          <Card>
+            <CardHeader><CardTitle>Video Brief Alignment Analysis</CardTitle></CardHeader>
+            <CardContent>
+              <h3 className="font-semibold mb-1 text-lg">تحليل التوافق مع الموجز:</h3>
+              <p className="text-muted-foreground whitespace-pre-wrap" dir="rtl">{briefComparisonAnalysis || 'لم يتم إنشاؤها أو غير متوفرة بعد.'}</p>
+            </CardContent>
+          </Card>
+          )}
         </div>
       )}
     </div>

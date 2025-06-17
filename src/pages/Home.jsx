@@ -7,8 +7,7 @@ import {
   Search, 
   Activity,
   ArrowRight,
-  Sparkles,
-  MessageSquareText // Added for Arabia Comment Mapper
+  Sparkles // Add new icon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -63,13 +62,6 @@ export default function Home() {
       icon: <Sparkles size={24} />,
       path: '/tools/video-summarizer',
       color: 'bg-teal-100 dark:bg-teal-900'
-    },
-    {
-      title: 'Arabia Comment Mapper',
-      description: 'Analyze YouTube comments to estimate commenter nationality from Arab countries using channel data and AI dialect analysis.',
-      icon: <MessageSquareText size={24} />,
-      path: '/tools/arabia-comment-mapper',
-      color: 'bg-green-100 dark:bg-green-900'
     }
   ];
 
