@@ -8,7 +8,8 @@ import {
   Activity,
   Sparkles, // Icon for AI Video Summarizer
   MessageSquareText, // Icon for Arabia Comment Mapper
-  Gamepad2 // Added Gamepad2
+  Gamepad2, // Added Gamepad2
+  Megaphone // Icon for Sponsored Content Checker
   // Users icon removed as it was assumed to be only for Lookalike Finder
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -62,6 +63,12 @@ export default function Sidebar() {
       name: 'PUBGMini', // Renamed
       path: '/#pubgmini-game-section',
       icon: <Gamepad2 size={20} /> // Icon remains
+    },
+    {
+      title: "Sponsored Content Checker",
+      href: "/tools/sponsored-checker",
+      icon: <Megaphone size={20} />,
+      label: "New", // Optional
     }
   ];
 
@@ -83,7 +90,7 @@ export default function Sidebar() {
                   )}
                 >
                   {item.icon}
-                  <span>{item.name}</span>
+                  <span>{item.title || item.name}</span>
                 </Link>
               </li>
             ))}
