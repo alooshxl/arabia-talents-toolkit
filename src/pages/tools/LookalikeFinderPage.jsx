@@ -69,19 +69,29 @@ export default function LookalikeFinderPage() {
       // const sourceChannelInfo = await youtubeApiService.getChannelInfo(resolvedChannelId);
       // console.log("Source Channel:", sourceChannelInfo);
 
-      const relatedChannelsSnippets = await youtubeApiService.findRelatedChannels(resolvedChannelId, numChannels[0]);
+      const relatedChannelsDataArray = await youtubeApiService.findRelatedChannels(resolvedChannelId, numChannels[0]);
 
-      if (!relatedChannelsSnippets || relatedChannelsSnippets.length === 0) {
+      if (!relatedChannelsDataArray || relatedChannelsDataArray.length === 0) {
         // No error, but no results. The results display section will handle this.
         setIsLoading(false);
         return;
       }
 
       // Enrich channels with full details (subscriber count, country etc.)
-      // Using Promise.allSettled to ensure all requests complete, even if some fail.
-      const enrichedChannelsPromises = relatedChannelsSnippets.map(snippet =>
-        youtubeApiService.getChannelInfo(snippet.id)
-      );
+      // relatedChannelsDataArray is an array of {id, frequency}
+      const enrichedChannelsPromises = relatedChannelsDataArray.map(async (channelStub) => {
+        try {
+          const channelInfo = await youtubeApiService.getChannelInfo(channelStub.id);
+          return { ...channelInfo, frequency: channelStub.frequency }; // Combine full info with frequency
+        } catch (err) {
+          console.warn(`Failed to fetch info for channel ${channelStub.id}:`, err);
+          // Return null or a specific structure to indicate failure for this item,
+          // which will be filtered out by successfullyEnrichedChannels logic.
+          // Or re-throw if Promise.allSettled is to catch it as 'rejected'.
+          // For allSettled, it's better to let it capture the actual error.
+          throw err;
+        }
+      });
 
       const settledResults = await Promise.allSettled(enrichedChannelsPromises);
 
@@ -89,10 +99,10 @@ export default function LookalikeFinderPage() {
         .filter(result => result.status === 'fulfilled' && result.value)
         .map(result => result.value);
 
-      // Log any channels that failed to enrich
+      // Log any channels that failed enrichment for debugging
       settledResults.forEach((result, index) => {
         if (result.status === 'rejected') {
-          console.warn(`Failed to fetch full info for channel ${relatedChannelsSnippets[index]?.id}:`, result.reason);
+          console.warn(`Enrichment failed for channel ID ${relatedChannelsDataArray[index]?.id}:`, result.reason);
         }
       });
 
@@ -121,9 +131,9 @@ export default function LookalikeFinderPage() {
       processedResults.sort((a, b) => (parseInt(b.statistics?.subscriberCount || 0) - parseInt(a.statistics?.subscriberCount || 0)));
     } else if (sortBy === 'alphabetical') {
       processedResults.sort((a, b) => a.snippet.title.localeCompare(b.snippet.title));
+    } else if (sortBy === 'similarity') {
+      processedResults.sort((a, b) => (b.frequency || 0) - (a.frequency || 0));
     }
-    // For 'similarity', do nothing to preserve API order (or original fetch order after enrichment)
-    // This assumes `results` are already in similarity order if that's how API returned them.
 
     // Apply live search filter
     let finalFilteredResults = [...processedResults];
@@ -401,6 +411,9 @@ export default function LookalikeFinderPage() {
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Country: {channel.snippet.country || 'N/A'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Similarity Score: {channel.frequency !== undefined ? channel.frequency : 'N/A'}
                       </p>
                       <Button
                         variant="outline"
