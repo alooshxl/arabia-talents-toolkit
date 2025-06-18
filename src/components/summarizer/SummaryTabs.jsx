@@ -1,90 +1,66 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Download, FileText, ListChecks, Zap } from 'lucide-react';
 
-const SummaryTabs = ({ summary }) => {
-  const [activeTab, setActiveTab] = useState('summary'); // 'summary', 'chapters', 'highlights'
+const SummaryDisplaySection = ({ title, content, icon: Icon }) => (
+  <div className="mb-4">
+    <h3 className="text-lg font-semibold mb-2 flex items-center">
+      {Icon && <Icon size={20} className="mr-2 text-primary" />}
+      {title}
+    </h3>
+    {typeof content === 'string' ? (
+      <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-md whitespace-pre-wrap">{content || 'Not available.'}</p>
+    ) : Array.isArray(content) && content.length > 0 ? (
+      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground bg-muted/30 p-3 rounded-md">
+        {content.map((item, i) => <li key={i}>{item}</li>)}
+      </ul>
+    ) : (
+      <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-md">Not available or not applicable.</p>
+    )}
+  </div>
+);
 
-  // Assuming summary is an object with different aspects like:
-  // summary.full: String
-  // summary.chapters: Array of { title: String, startTime: Number, content: String }
-  // summary.highlights: Array of { text: String, timestamp: Number }
+const SummaryTabs = ({ summaryData, videoDetails, transcript, onDownload }) => {
+  if (!summaryData) return null;
 
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'summary':
-        return <div className="p-4 bg-white rounded-lg shadow">{summary.full || 'No summary available.'}</div>;
-      case 'chapters':
-        return (
-          <div className="space-y-4">
-            {summary.chapters && summary.chapters.length > 0 ? (
-              summary.chapters.map((chapter, index) => (
-                <div key={index} className="p-4 bg-white rounded-lg shadow">
-                  <h3 className="font-semibold text-lg mb-1">{chapter.title} ({(new Date(chapter.startTime * 1000).toISOString().substr(11, 8))})</h3>
-                  <p>{chapter.content}</p>
-                </div>
-              ))
-            ) : (
-              <p className="p-4 bg-white rounded-lg shadow">No chapters available.</p>
-            )}
-          </div>
-        );
-      case 'highlights':
-        return (
-          <ul className="space-y-2">
-            {summary.highlights && summary.highlights.length > 0 ? (
-              summary.highlights.map((highlight, index) => (
-                <li key={index} className="p-3 bg-white rounded-lg shadow flex items-start">
-                  <span className="text-blue-500 font-semibold mr-2">▶</span>
-                  <span>{highlight.text} ({(new Date(highlight.timestamp * 1000).toISOString().substr(11, 8))})</span>
-                </li>
-              ))
-            ) : (
-              <p className="p-4 bg-white rounded-lg shadow">No highlights available.</p>
-            )}
-          </ul>
-        );
-      default:
-        return <div className="p-4">Select a tab.</div>;
-    }
+  const renderSummaryContent = (lang) => {
+    const summary = summaryData[lang];
+    if (!summary) return <p className="text-center py-4">Summary for {lang.toUpperCase()} is not available.</p>;
+
+    return (
+      <div className="space-y-4 pt-4">
+        <div className="flex justify-between items-center mb-3">
+          <h2 className="text-xl font-bold">Summary ({lang.toUpperCase()})</h2>
+          {onDownload && videoDetails && (
+            <Button variant="outline" size="sm" onClick={() => onDownload(lang)}>
+              <Download size={16} className="mr-1" /> Download (.txt)
+            </Button>
+          )}
+        </div>
+
+        <SummaryDisplaySection title="Title Summary" content={summary.title_summary} icon={FileText} />
+        <SummaryDisplaySection title="Main Topic" content={summary.main_topic} icon={Zap} />
+        <SummaryDisplaySection title="Key Points" content={summary.key_points} icon={ListChecks} />
+        <SummaryDisplaySection title="Highlights & Insights" content={summary.highlights_insights} icon={Zap} />
+        <SummaryDisplaySection title="Overall Sentiment" content={summary.sentiment} icon={Zap} />
+      </div>
+    );
   };
 
   return (
-    <div>
-      <div className="mb-4 border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-          <button
-            onClick={() => setActiveTab('summary')}
-            className={`${
-              activeTab === 'summary'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-          >
-            Full Summary
-          </button>
-          <button
-            onClick={() => setActiveTab('chapters')}
-            className={`${
-              activeTab === 'chapters'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-          >
-            Chapters
-          </button>
-          <button
-            onClick={() => setActiveTab('highlights')}
-            className={`${
-              activeTab === 'highlights'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-          >
-            Key Highlights
-          </button>
-        </nav>
-      </div>
-      <div>{renderContent()}</div>
-    </div>
+    <Tabs defaultValue="ar" className="w-full mt-4">
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="ar">Arabic (العربية)</TabsTrigger>
+        <TabsTrigger value="en">English</TabsTrigger>
+      </TabsList>
+      <TabsContent value="ar">
+        {renderSummaryContent('ar')}
+      </TabsContent>
+      <TabsContent value="en">
+        {renderSummaryContent('en')}
+      </TabsContent>
+    </Tabs>
   );
 };
 
