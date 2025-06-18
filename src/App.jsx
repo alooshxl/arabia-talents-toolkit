@@ -14,6 +14,7 @@ const SearchTool = lazy(() => import('./pages/tools/SearchTool'));
 const TrendingChecker = lazy(() => import('./pages/tools/TrendingChecker'));
 const VideoSummarizer = lazy(() => import('./pages/tools/VideoSummarizer'));
 const ArabiaCommentMapper = lazy(() => import('./pages/tools/ArabiaCommentMapper'));
+const LookalikeFinderPage = lazy(() => import('./pages/tools/LookalikeFinderPage')); // Added
 const PubgMiniPage = lazy(() => import('./pages/tools/PubgMiniPage'));
 
 // Loading component
@@ -75,6 +76,11 @@ function App() {
             <Route path="tools/arabia-comment-mapper" element={
               <Suspense fallback={<LoadingFallback />}>
                 <ArabiaCommentMapper />
+              </Suspense>
+            } />
+            <Route path="tools/lookalike-finder" element={
+              <Suspense fallback={<LoadingFallback />}>
+                <LookalikeFinderPage />
               </Suspense>
             } />
             <Route path="tools/pubgmini" element={
