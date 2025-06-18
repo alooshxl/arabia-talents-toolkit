@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './contexts/AppContext';
 import Layout from './components/layout/Layout';
+import ErrorBoundary from './components/utils/ErrorBoundary'; // Added
 import './App.css';
 
 // Lazy load tool components
@@ -80,7 +81,9 @@ function App() {
             } />
             <Route path="tools/lookalike-finder" element={
               <Suspense fallback={<LoadingFallback />}>
-                <LookalikeFinderPage />
+                <ErrorBoundary>
+                  <LookalikeFinderPage />
+                </ErrorBoundary>
               </Suspense>
             } />
             <Route path="tools/pubgmini" element={
