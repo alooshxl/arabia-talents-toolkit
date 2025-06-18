@@ -91,18 +91,29 @@ class YouTubeApiService {
         return null;
       }
 
-      const englishTracks = captionListData.items.filter(track => track.snippet.language === 'en' || track.snippet.language.startsWith('en-'));
-
       let selectedTrack = null;
-      if (englishTracks.length > 0) {
-        // Prioritize standard, then ASR, then any English track
-        selectedTrack = englishTracks.find(track => track.snippet.trackKind === 'standard') ||
-                        englishTracks.find(track => track.snippet.trackKind === 'ASR') ||
-                        englishTracks[0];
+      const tracks = captionListData.items;
+
+      // Priority 1: Arabic Official
+      selectedTrack = tracks.find(track => track.snippet.language === 'ar' && track.snippet.trackKind === 'standard');
+
+      // Priority 2: Arabic ASR
+      if (!selectedTrack) {
+        selectedTrack = tracks.find(track => track.snippet.language === 'ar' && track.snippet.trackKind === 'ASR');
+      }
+
+      // Priority 3: English Official
+      if (!selectedTrack) {
+        selectedTrack = tracks.find(track => track.snippet.language === 'en' && track.snippet.trackKind === 'standard');
+      }
+
+      // Priority 4: English ASR
+      if (!selectedTrack) {
+        selectedTrack = tracks.find(track => track.snippet.language === 'en' && track.snippet.trackKind === 'ASR');
       }
 
       if (!selectedTrack) {
-        console.log(`No English caption track found for video ID: ${videoId}`);
+        console.log(`No suitable caption track found for video ID (Priority: Ar-Std, Ar-ASR, En-Std, En-ASR): ${videoId}`);
         return null;
       }
 
