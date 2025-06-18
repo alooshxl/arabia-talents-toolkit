@@ -22,8 +22,6 @@ const getOneYearAgoDate = () => {
 };
 
 const manualKeywords = [
-// List of Arabic + English indicators for sponsorship/ad content
-const sponsorshipIndicators = [
   // Direct sponsorship
   '#إعلان', '#اعلان', // Arabic for #advertisement
   'إعلان مدفوع', 'اعلان مدفوع', // Paid advertisement (Arabic)
