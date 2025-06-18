@@ -8,7 +8,8 @@ import {
   Activity,
   ArrowRight,
   Sparkles,
-  MessageSquareText // Added for Arabia Comment Mapper
+  MessageSquareText, // Added for Arabia Comment Mapper
+  Users // Added for Lookalike Finder
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -71,6 +72,13 @@ export default function Home() {
       icon: <MessageSquareText size={24} />,
       path: '/tools/arabia-comment-mapper',
       color: 'bg-green-100 dark:bg-green-900'
+    },
+    {
+      title: 'Lookalike Finder',
+      description: 'Input a YouTube channel to find similar creators, with filters for MENA region and more.',
+      icon: <Users size={24} />,
+      path: '/tools/lookalike-finder',
+      color: 'bg-cyan-100 dark:bg-cyan-900'
     }
   ];
 

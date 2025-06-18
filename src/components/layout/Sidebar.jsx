@@ -8,7 +8,8 @@ import {
   Activity,
   Sparkles, // Icon for AI Video Summarizer
   MessageSquareText, // Icon for Arabia Comment Mapper
-  Gamepad2 // Added Gamepad2
+  Gamepad2, // Added Gamepad2
+  Users // Icon for Lookalike Finder
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -40,6 +41,11 @@ export default function Sidebar() {
       name: 'Search Tool',
       path: '/tools/search-tool',
       icon: <Search size={20} />
+    },
+    {
+      name: 'Lookalike Finder',
+      path: '/tools/lookalike-finder',
+      icon: <Users size={20} />
     },
     {
       name: 'Trending Checker',
