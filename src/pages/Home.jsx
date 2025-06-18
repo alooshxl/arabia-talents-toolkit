@@ -8,10 +8,8 @@ import {
   Activity,
   ArrowRight,
   Sparkles,
-  MessageSquareText, // Added for Arabia Comment Mapper
-  Megaphone // Icon for Sponsored Content Checker
+  MessageSquareText // Added for Arabia Comment Mapper
   // Users icon removed
-  // Megaphone icon for Sponsored Content Checker (re-added) -- THIS LINE WILL BE REMOVED
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -63,10 +61,10 @@ export default function Home() {
     },
     {
       title: 'AI Video Summarizer',
-      description: 'Get AI-powered summaries and key topics for any YouTube video.',
+      description: 'Summarize videos in English & Arabic with Gemini + subtitles.',
       icon: <Sparkles size={24} />,
-      path: '/tools/video-summarizer',
-      color: 'bg-teal-100 dark:bg-teal-900'
+      path: '/tools/ai-video-summarizer',
+      color: 'bg-purple-100 dark:bg-purple-900',
     },
     {
       title: 'Arabia Comment Mapper',
@@ -74,16 +72,15 @@ export default function Home() {
       icon: <MessageSquareText size={24} />,
       path: '/tools/arabia-comment-mapper',
       color: 'bg-green-100 dark:bg-green-900'
-    },
-    {
-      title: "Sponsored Content Checker",
-      description: "Detects sponsored content in YouTube video descriptions.",
-      href: "/tools/sponsored-checker",
-      icon: <Megaphone className="w-8 h-8" />, // Or PackageSearch
-      color: 'bg-indigo-100 dark:bg-indigo-900' // Added a color for consistency
     }
     // Removed Sponsored Content Checker card:
     // {
+    //   title: "Sponsored Content Checker",
+    //   description: "Detects sponsored content in YouTube video descriptions. (Rebuilt)",
+    //   href: "/tools/sponsored-checker",
+    //   icon: <Megaphone className="w-8 h-8" />,
+    //   color: "bg-sky-100 dark:bg-sky-900",
+    // }
     //   title: "Sponsored Content Checker",
     //   description: "Detects sponsored content in YouTube video descriptions. (Rebuilt)",
     //   href: "/tools/sponsored-checker",
