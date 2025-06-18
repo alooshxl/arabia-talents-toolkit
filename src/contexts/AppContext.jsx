@@ -54,7 +54,7 @@ export const AppProvider = ({ children }) => {
   }, []);
 
   const value = {
-    apiKey,
+    youtubeApiKey: apiKey,
     updateApiKey,
     loading,
     setLoading,
