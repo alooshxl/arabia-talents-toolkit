@@ -91,7 +91,7 @@ class YouTubeApiService {
         return null;
       }
 
-      let selectedTrack = null;
+        let selectedTrack = null;
       const tracks = captionListData.items;
 
       // Priority 1: Arabic Official
@@ -114,6 +114,8 @@ class YouTubeApiService {
 
       if (!selectedTrack) {
         console.log(`No suitable caption track found for video ID (Priority: Ar-Std, Ar-ASR, En-Std, En-ASR): ${videoId}`);
+      }
+
         return null;
       }
 
