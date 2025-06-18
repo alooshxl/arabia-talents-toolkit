@@ -8,7 +8,8 @@ import {
   Activity,
   ArrowRight,
   Sparkles,
-  MessageSquareText // Added for Arabia Comment Mapper
+  MessageSquareText, // Added for Arabia Comment Mapper
+  Megaphone // Icon for Sponsored Content Checker (re-added)
   // Users icon removed
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -72,6 +73,13 @@ export default function Home() {
       icon: <MessageSquareText size={24} />,
       path: '/tools/arabia-comment-mapper',
       color: 'bg-green-100 dark:bg-green-900'
+    },
+    {
+      title: "Sponsored Content Checker",
+      description: "Detects sponsored content in YouTube video descriptions. (Rebuilt)",
+      href: "/tools/sponsored-checker",
+      icon: <Megaphone className="w-8 h-8" />,
+      color: "bg-sky-100 dark:bg-sky-900",
     }
     // Lookalike Finder card object removed
   ];
@@ -87,7 +95,7 @@ export default function Home() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {tools.map((tool) => (
-          <Card key={tool.path} className="overflow-hidden">
+          <Card key={tool.path || tool.href} className="overflow-hidden">
             <CardHeader className="pb-2">
               <div className={`w-12 h-12 rounded-lg flex items-center justify-center mb-2 ${tool.color}`}>
                 {tool.icon}
@@ -97,7 +105,7 @@ export default function Home() {
             </CardHeader>
             <CardFooter>
               <Button asChild className="w-full">
-                <Link to={tool.path} className="flex items-center justify-center gap-2">
+                <Link to={tool.path || tool.href} className="flex items-center justify-center gap-2">
                   Open Tool <ArrowRight size={16} />
                 </Link>
               </Button>
