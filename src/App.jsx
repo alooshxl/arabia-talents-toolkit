@@ -17,6 +17,7 @@ const VideoSummarizer = lazy(() => import('./pages/tools/VideoSummarizer'));
 const ArabiaCommentMapper = lazy(() => import('./pages/tools/ArabiaCommentMapper'));
 // const LookalikeFinderPage = lazy(() => import('./pages/tools/LookalikeFinderPage')); // Removed
 const PubgMiniPage = lazy(() => import('./pages/tools/PubgMiniPage'));
+const SponsoredChecker = lazy(() => import('./pages/tools/SponsoredChecker'));
 
 // Loading component
 function LoadingFallback() {
@@ -83,6 +84,11 @@ function App() {
             <Route path="tools/pubgmini" element={
               <Suspense fallback={<LoadingFallback />}>
                 <PubgMiniPage />
+              </Suspense>
+            } />
+            <Route path="tools/sponsored-checker" element={
+              <Suspense fallback={<LoadingFallback />}>
+                <SponsoredChecker />
               </Suspense>
             } />
             <Route path="*" element={<Navigate to="/" replace />} />
