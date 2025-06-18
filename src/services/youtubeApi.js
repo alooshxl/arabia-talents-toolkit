@@ -295,106 +295,103 @@ class YouTubeApiService {
    * Each object contains id, title, description, thumbnails.
    * @throws {Error} If the source channel ID is invalid or other API errors occur.
    */
-  async findRelatedChannels(channelId, count = 10) {
-    if (!channelId) {
-      throw new Error('Channel ID is required to find related channels.');
+  async findRelatedChannels(sourceChannelId, count = 10) {
+    if (!sourceChannelId) {
+      throw new Error('Source channel ID is required to find related channels.');
     }
-    count = Math.min(Math.max(count, 5), 50); // Clamp count
+    count = Math.min(Math.max(count, 5), 50); // Clamp requested count
 
-    let seedVideoId = null;
+    const sourceVideoCount = 5; // Number of latest videos from source channel to analyze
+    const relatedVideoCountPerSource = 10; // Number of related videos to fetch for each source video
+
+    // 1. Fetch latest videos from the source channel
+    let sourceVideos = [];
     try {
-      // 1. Get a seed video ID from the target channel (try most recent first)
-      const searchData = await this.makeRequest('search', {
-        part: 'id',
-        channelId: channelId,
+      const videoSearchData = await this.makeRequest('search', {
+        part: 'snippet', // We need snippet for video.id.videoId
+        channelId: sourceChannelId,
         type: 'video',
         order: 'date',
-        maxResults: 1
+        maxResults: sourceVideoCount
       });
-
-      if (searchData.items && searchData.items.length > 0) {
-        seedVideoId = searchData.items[0].id.videoId;
+      if (videoSearchData.items && videoSearchData.items.length > 0) {
+        sourceVideos = videoSearchData.items;
       } else {
-        // Fallback: try viewCount if no recent videos found
-        const searchDataByViewCount = await this.makeRequest('search', {
-          part: 'id',
-          channelId: channelId,
-          type: 'video',
-          order: 'viewCount',
-          maxResults: 1
+        // If no videos by date, try by viewcount as a softer fallback before giving up on seed videos
+        const videoSearchByViewData = await this.makeRequest('search', {
+            part: 'snippet',
+            channelId: sourceChannelId,
+            type: 'video',
+            order: 'viewCount',
+            maxResults: sourceVideoCount
         });
-        if (searchDataByViewCount.items && searchDataByViewCount.items.length > 0) {
-          seedVideoId = searchDataByViewCount.items[0].id.videoId;
+        if (videoSearchByViewData.items && videoSearchByViewData.items.length > 0) {
+            sourceVideos = videoSearchByViewData.items;
         } else {
-          console.warn(`No videos found for channel ${channelId} to use as seed.`);
+            throw new Error('No recent public videos found for this channel to analyze for relatedness.');
         }
       }
     } catch (error) {
-      console.error(`Error fetching seed video for channel ${channelId}:`, error);
-      // Don't throw yet, proceed to fallback if seedVideoId is null
+      console.error(`Error fetching source videos for channel ${sourceChannelId}:`, error);
+      // Re-throw or throw a more specific error if this step is critical
+      if (error.message.includes('No recent public videos found')) throw error;
+      throw new Error(`Failed to fetch source videos: ${error.message}`);
     }
 
-    try {
-      if (seedVideoId) {
-        // 2. Find related channels using the seed video ID
-        const relatedData = await this.makeRequest('search', {
-          part: 'snippet', // snippet contains channelId, title, description, thumbnails
-          relatedToVideoId: seedVideoId,
-          type: 'channel',
-          maxResults: count
-        });
+    if (sourceVideos.length === 0) { // Should be caught by the error above, but as a safeguard
+      throw new Error('No public videos found for this channel to analyze for relatedness.');
+    }
 
-        if (relatedData.items && relatedData.items.length > 0) {
-          return relatedData.items
-            .filter(item => item.snippet.channelId !== channelId) // Exclude the original channel
-            .map(item => ({
-              id: item.snippet.channelId,
-              title: item.snippet.title,
-              description: item.snippet.description,
-              thumbnails: item.snippet.thumbnails,
-              // Note: country and subscriber count are not available from search.list for related channels
-            }));
-        }
+    // 2. Collect related channels from these videos
+    const channelFrequencies = new Map();
+
+    // Process requests for related videos in parallel for efficiency
+    const relatedVideoPromises = sourceVideos.map(video => {
+      if (!video.id?.videoId) { // Ensure videoId exists
+          console.warn("Source video item missing videoId:", video);
+          return Promise.resolve({ items: [] }); // Resolve with empty items if no ID
       }
-
-      // Fallback: If no seed video or no related channels found via seed video
-      console.warn(`Could not find related channels using seed video (or no seed video found) for ${channelId}. Attempting fallback using channel title.`);
-      const originalChannelInfo = await this.getChannelInfo(channelId); // getChannelInfo is cached
-      const channelTitleQuery = originalChannelInfo.snippet?.title?.trim(); // Trim the title
-
-      if (!channelTitleQuery) { // Check if title is null, undefined, or empty after trim
-        console.warn(`Channel ${channelId} has no valid title for fallback search in findRelatedChannels. Skipping fallback search.`);
-        // If the main seedVideoId method also failed to return results before this,
-        // and now the fallback also cannot proceed, then we should return an empty array.
-        // Assuming this is within the larger try-catch of findRelatedChannels,
-        // returning [] here means no related channels were found via this path.
-        return [];
-      }
-      // ... then proceed with:
-      const relatedChannelsData = await this.makeRequest('search', {
-        part: 'snippet',
-        q: channelTitleQuery, // Search by original channel's title
-        type: 'channel',
-        maxResults: count + 1 // Fetch a bit more to allow filtering self
+      return this.makeRequest('search', {
+        part: 'snippet', // Need snippet for relatedVideo.snippet.channelId
+        relatedToVideoId: video.id.videoId,
+        type: 'video', // Fetch related *videos* first, then extract their channel IDs
+        maxResults: relatedVideoCountPerSource
+      }).catch(err => {
+        // Log error for individual related video search but don't let it stop others
+        console.warn(`Error fetching related videos for videoId ${video.id.videoId}:`, err.message);
+        return { items: [] }; // Return empty items on error for this specific video
       });
+    });
 
-      if (!relatedChannelsData.items || relatedChannelsData.items.length === 0) {
-        return []; // No related channels found even with fallback
+    const allRelatedVideoResults = await Promise.all(relatedVideoPromises);
+
+    for (const result of allRelatedVideoResults) {
+      if (result && result.items) {
+        for (const relatedVideo of result.items) {
+          if (relatedVideo.snippet && relatedVideo.snippet.channelId) {
+            const relatedChannelId = relatedVideo.snippet.channelId;
+            if (relatedChannelId !== sourceChannelId) { // Don't count the source channel itself
+              channelFrequencies.set(relatedChannelId, (channelFrequencies.get(relatedChannelId) || 0) + 1);
+            }
+          }
+        }
       }
-
-      return relatedChannelsData.items
-        .filter(item => item.snippet.channelId !== channelId) // Exclude the original channel
-        .map(item => ({
-          id: item.snippet.channelId,
-          title: item.snippet.title,
-          description: item.snippet.description,
-          thumbnails: item.snippet.thumbnails,
-        })).slice(0, count); // Ensure correct count after filtering
-
-    } catch (error) {
-      console.error('Error in findRelatedChannels process:', error);
-      throw new Error(`Could not find related channels: ${error.message}`);
     }
+
+    if (channelFrequencies.size === 0) {
+      // No related channels found from any of the videos
+      return [];
+    }
+
+    // 3. Format and sort results
+    const sortedChannels = Array.from(channelFrequencies, ([id, frequency]) => ({ id, frequency }))
+      .sort((a, b) => b.frequency - a.frequency);
+
+    // 4. Return top N channels (or fewer if not enough unique channels were found)
+    // The objects returned now are { id, frequency }. The previous version returned { id, title, description, thumbnails }.
+    // The current LookalikeFinderPage.jsx expects the latter structure after enrichment.
+    // This method should just return the IDs and frequencies, enrichment happens in the page component.
+    return sortedChannels.slice(0, count);
   }
 
   async getVideoComments(videoId, maxResults = 100) {
