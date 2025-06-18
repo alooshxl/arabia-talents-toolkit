@@ -151,9 +151,16 @@ class YouTubeApiService {
       // Fallback: if forUsername fails, and it looked like a handle, try searching
       if (url.includes('/@') || username.startsWith('@')) {
         const handle = username.startsWith('@') ? username : `@${username}`;
-        const searchData = await this.makeRequest('search', { part: 'id', q: handle, type: 'channel', maxResults: 1 });
+        // Search API is better for @handles.
+        // part: 'snippet' is needed to get snippet.channelId
+        const searchData = await this.makeRequest('search', { part: 'snippet', q: handle, type: 'channel', maxResults: 1 });
+
         if (searchData.items && searchData.items.length > 0) {
-          return searchData.items[0].snippet.channelId;
+          const item = searchData.items[0];
+          // Safely access channelId
+          if (item && item.snippet && typeof item.snippet.channelId === 'string') {
+            return item.snippet.channelId;
+          }
         }
       }
 
