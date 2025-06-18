@@ -10,6 +10,7 @@ import {
   MessageSquareText, // Icon for Arabia Comment Mapper
   Gamepad2 // Added Gamepad2
   // Users icon removed as it was assumed to be only for Lookalike Finder
+  // Megaphone icon for Sponsored Content Checker (re-added) -- THIS LINE WILL BE REMOVED
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -63,6 +64,13 @@ export default function Sidebar() {
       path: '/#pubgmini-game-section',
       icon: <Gamepad2 size={20} /> // Icon remains
     }
+    // Removed Sponsored Content Checker item:
+    // {
+    //   title: "Sponsored Content Checker",
+    //   href: "/tools/sponsored-checker",
+    //   icon: <Megaphone size={20} />,
+    //   label: "New", // Optional
+    // }
   ];
 
   return (
@@ -72,18 +80,18 @@ export default function Sidebar() {
         <nav>
           <ul className="space-y-1">
             {navItems.map((item) => (
-              <li key={item.path}>
+              <li key={item.path || item.href}>
                 <Link
-                  to={item.path}
+                  to={item.path || item.href}
                   className={cn(
                     "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                    location.pathname === item.path
+                    location.pathname === (item.path || item.href) // Ensure comparison works for both path and href
                       ? "bg-primary text-primary-foreground"
                       : "hover:bg-accent hover:text-accent-foreground"
                   )}
                 >
                   {item.icon}
-                  <span>{item.name}</span>
+                  <span>{item.title || item.name}</span>
                 </Link>
               </li>
             ))}
