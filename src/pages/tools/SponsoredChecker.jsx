@@ -22,47 +22,85 @@ const getOneYearAgoDate = () => {
 };
 
 const manualKeywords = [
-  // Direct sponsorship indicators
-  '#إعلان', '#اعلان', // Arabic for #advertisement/#ad
-  'إعلان مدفوع', // Arabic for "paid advertisement"
-  'اعلان مدفوع', // Common variation
-  'برعاية', // Arabic for "sponsored by"
+// List of Arabic + English indicators for sponsorship/ad content
+const sponsorshipIndicators = [
+  // Direct sponsorship
+  '#إعلان', '#اعلان', // Arabic for #advertisement
+  'إعلان مدفوع', 'اعلان مدفوع', // Paid advertisement (Arabic)
+  'برعاية', // Sponsored by (Arabic)
   'sponsored by',
   'advertisement',
-  '#ad', // More specific than just "ad"
-  'paid promotion', // YouTube's standard phrase (English)
-  'يتضمن الترويج المدفوع', // YouTube's standard phrase (Arabic)
-  'محتوى مدفوع', // Arabic for "paid content"
-  'مراجعة مدفوعة', // Arabic for "paid review"
+  '#ad',
+  'paid promotion',
+  'يتضمن الترويج المدفوع', // YouTube standard Arabic
+  'محتوى مدفوع',
+  'مراجعة مدفوعة',
   'paid review',
 
   // Discount / Promo codes
   'discount code',
-  'كود خصم', // Arabic for "discount code"
+  'كود خصم',
+  'كود الخصم',
   'promo code',
-  'برومو كود', // Arabic for "promo code"
+  'برومو كود',
   'coupon code',
+  'خصم خاص',
+  'special discount',
+  'عرض خاص',
+  'special offer',
 
-  // Affiliation / Partnership
-  'affiliation',
-  'affiliate link', // More specific
-  'بالتعاون مع', // Arabic for "in collaboration with"
+  // Call to action (CTA)
+  'اشترك الآن',
+  'subscribe now',
+  'سجل الآن',
+  'register now',
+  'زوروا موقع',
+  'visit website',
+  'لمزيد من المعلومات',
+  'for more info',
+  'متاح الآن',
+  'available now',
+  'تسوق الآن',
+  'shop now',
+
+  // Affiliations & Collaborations
+  'بالتعاون مع',
+  'بالشراكة مع',
   'in collaboration with',
-  'بالشراكة مع', // Arabic for "in partnership with"
   'in partnership with',
+  'affiliation',
+  'affiliate link',
 
   // Funding / Presentation
-  'بتمويل من', // Arabic for "funded by"
+  'بتمويل من',
   'funded by',
-  'مقدم من', // Arabic for "presented by"
+  'مقدم من',
   'presented by',
 
-  // Specific call to actions that are often sponsored, but less generic than "download link"
-  // Example: Use my code XYZ at checkout
-  // These might still need careful handling or be better for Gemini, but keeping a few targeted ones.
-  // 'استخدم كود', // "use code" - can be part of a discount phrase
+  // Shortened sponsor links (common)
+  'bit.ly',
+  'rb.gy',
+  'tinyurl.com',
+  'shorturl.at',
+
+  // Influencer-specific ads
+  'استخدم كود اللاعب',
+  'use player code',
+  'ادعمني في اللعبة',
+  'support me in-game',
+
+  // Other phrases
+  'رابط التحميل',
+  'حمل اللعبة',
+  'حمل التطبيق',
+  'download link',
+  'download game',
+  'download app',
+  'هذا الفيديو يحتوي على ترويج مدفوع',
+  'this video contains paid promotion'
 ];
 
+// Duration parser utility
 function parseISO8601Duration(isoDuration) {
   if (!isoDuration || typeof isoDuration !== 'string') return 0;
   const regex = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/;
@@ -73,7 +111,6 @@ function parseISO8601Duration(isoDuration) {
   const seconds = parseInt(matches[3] || 0);
   return (hours * 3600) + (minutes * 60) + seconds;
 }
-
 // Chart configuration (using common color names, can be replaced with CSS variables if available)
 const chartConfig = {
   sponsored: { label: "Sponsored", color: "#22c55e" }, // green-500
@@ -194,9 +231,10 @@ Respond in **Arabic** if the description is primarily Arabic, otherwise respond 
 **الكلمات الدالة:** {كلمات أو عبارات رُصدت}
 `;
     try {
-      // Ensure inputs to hashing are strings and use the correct service for hashing
-      const stringToHash = String(videoTitle || "") + String(description || "");
-      const cacheKey = `sponsorship_analysis_${geminiApiService._hashString(stringToHash)}`;
+// Ensure inputs to hashing are strings and use the correct service for hashing
+const stringToHash = String(videoTitle || '') + String(description || '');
+const cacheKey = `sponsorship_analysis_${youtubeApiService._hashString(stringToHash)}`;
+
       const geminiResponseText = await geminiApiService.generateContent(geminiApiKey, prompt, cacheKey);
       return parseGeminiResponse(geminiResponseText);
     } catch (error) {
@@ -261,27 +299,30 @@ Respond in **Arabic** if the description is primarily Arabic, otherwise respond 
       }
 
       setLoadingMessage(`Fetching details for ${videoIds.length} videos...`);
-      const fetchedVideoDetailsList = await youtubeApiService.getMultipleVideoDetails(videoIds);
+const fetchedVideoDetailsList = await youtubeApiService.getMultipleVideoDetails(videoIds);
 
-      // Filter videos by duration (>= 60 seconds)
-      const videosToAnalyze = fetchedVideoDetailsList.filter(video => {
-        const durationInSeconds = parseISO8601Duration(video.contentDetails?.duration);
-        return durationInSeconds >= 60;
-      });
+// Filter videos by duration (>= 60 seconds)
+const videosToAnalyze = fetchedVideoDetailsList.filter(video => {
+  const durationInSeconds = parseISO8601Duration(video.contentDetails?.duration);
+  return durationInSeconds >= 60;
+});
 
-      if (videosToAnalyze.length === 0) {
-        setLoadingMessage(`No videos found with duration >= 60 seconds from the ${fetchedVideoDetailsList.length} fetched videos.`);
-        setTimeout(() => setLoadingMessage(''), 4000);
-        setSummary({ totalChecked: 0, totalSponsored: 0, topAdvertisers: [] }); // Reflect that 0 videos were actually checked
-        setIsLoading(false); return;
-      }
+if (videosToAnalyze.length === 0) {
+  setLoadingMessage(`No videos found with duration >= 60 seconds from the ${fetchedVideoDetailsList.length} fetched videos.`);
+  setTimeout(() => setLoadingMessage(''), 4000);
+  setSummary({ totalChecked: 0, totalSponsored: 0, topAdvertisers: [] }); // Reflect that 0 videos were actually checked
+  setIsLoading(false);
+  return;
+}
 
-      let processedResults = []; let sponsoredCount = 0; const advertiserFrequency = {};
-      const totalVideosToAnalyze = videosToAnalyze.length;
+let processedResults = [];
+let sponsoredCount = 0;
+const advertiserFrequency = {};
+const totalVideosToAnalyze = videosToAnalyze.length;
 
-      for (const video of videosToAnalyze) {
-        currentVideoIndex++;
-        setLoadingMessage(`Analyzing video ${currentVideoIndex} of ${totalVideosToAnalyze}: ${video.snippet.title.substring(0,30)}...`);
+for (const video of videosToAnalyze) {
+  currentVideoIndex++;
+  setLoadingMessage(`Analyzing video ${currentVideoIndex} of ${totalVideosToAnalyze}: ${video.snippet.title.substring(0, 30)}...`);
 
         let analysis;
         if (useGemini) {
@@ -309,7 +350,12 @@ Respond in **Arabic** if the description is primarily Arabic, otherwise respond 
       }
 
       const topAdvertisers = Object.entries(advertiserFrequency).sort(([,a],[,b]) => b-a).slice(0, 5).map(([name, count]) => `${name} (${count} videos)`);
-      setSummary({ totalChecked: totalVideosToAnalyze, totalSponsored: sponsoredCount, topAdvertisers });
+setSummary({
+  totalChecked: videosToAnalyze.length,
+  totalSponsored: sponsoredCount,
+  topAdvertisers
+});
+
 
     } catch (error) {
       console.error("Error during analysis:", error); alert(`An error occurred: ${error.message}`);
