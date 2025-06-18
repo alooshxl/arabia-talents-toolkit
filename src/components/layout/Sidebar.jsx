@@ -52,8 +52,9 @@ export default function Sidebar() {
     },
     {
       name: 'AI Video Summarizer',
-      path: '/tools/video-summarizer',
-      icon: <Sparkles size={20} />
+      path: '/tools/ai-video-summarizer',
+      icon: <Sparkles size={20} />,
+      label: 'New'
     },
     {
       name: 'Arabia Comment Mapper',

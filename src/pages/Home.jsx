@@ -63,10 +63,10 @@ export default function Home() {
     },
     {
       title: 'AI Video Summarizer',
-      description: 'Get AI-powered summaries and key topics for any YouTube video.',
+      description: 'Summarize videos in English & Arabic with Gemini + subtitles.',
       icon: <Sparkles size={24} />,
-      path: '/tools/video-summarizer',
-      color: 'bg-teal-100 dark:bg-teal-900'
+      path: '/tools/ai-video-summarizer',
+      color: 'bg-purple-100 dark:bg-purple-900',
     },
     {
       title: 'Arabia Comment Mapper',
