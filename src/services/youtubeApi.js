@@ -103,9 +103,10 @@ class YouTubeApiService {
    * @throws {Error} If the channel ID cannot be resolved.
    */
   async resolveChannelId(urlOrId) {
-    if (!urlOrId || typeof urlOrId !== 'string') {
-      throw new Error('Input must be a non-empty string (URL or Channel ID).');
+    if (typeof urlOrId !== 'string' || !urlOrId.trim()) {
+      throw new Error('Input must be a non-empty string (URL or Channel ID). Please provide a valid YouTube channel URL or ID.');
     }
+    urlOrId = urlOrId.trim(); // Use the trimmed version for subsequent logic
 
     // 1. Check if it's a standard channel ID format
     if (/^UC[A-Za-z0-9_-]{22}$/.test(urlOrId) || /^HC[A-Za-z0-9_-]{22}$/.test(urlOrId)) {
@@ -174,13 +175,13 @@ class YouTubeApiService {
       // If it's a handle or forUsername failed, try search API
       // This is a more robust way for @handles if they don't directly map to forUsername
       const searchData = await this.makeRequest('search', {
-        part: 'id',
+        part: 'snippet', // << CHANGED HERE
         q: isHandle ? `@${identifier}` : identifier, // Search with @ prefix if it was a handle
         type: 'channel',
         maxResults: 1
       });
 
-      if (searchData.items && searchData.items.length > 0) {
+      if (searchData.items && searchData.items.length > 0 && searchData.items[0].snippet) { // << ADDED snippet CHECK
         // Verify if the found channel's snippet title or custom URL matches the identifier closely, if needed.
         // For now, assume the top result is correct.
         return searchData.items[0].snippet.channelId;
