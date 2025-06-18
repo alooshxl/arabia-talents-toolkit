@@ -360,12 +360,17 @@ class YouTubeApiService {
       // Fallback: If no seed video or no related channels found via seed video
       console.warn(`Could not find related channels using seed video (or no seed video found) for ${channelId}. Attempting fallback using channel title.`);
       const originalChannelInfo = await this.getChannelInfo(channelId); // getChannelInfo is cached
-      const channelTitleQuery = originalChannelInfo.snippet?.title;
+      const channelTitleQuery = originalChannelInfo.snippet?.title?.trim(); // Trim the title
 
-      if (!channelTitleQuery) {
-        throw new Error('Channel title is unavailable for fallback search, and seed video method failed.');
+      if (!channelTitleQuery) { // Check if title is null, undefined, or empty after trim
+        console.warn(`Channel ${channelId} has no valid title for fallback search in findRelatedChannels. Skipping fallback search.`);
+        // If the main seedVideoId method also failed to return results before this,
+        // and now the fallback also cannot proceed, then we should return an empty array.
+        // Assuming this is within the larger try-catch of findRelatedChannels,
+        // returning [] here means no related channels were found via this path.
+        return [];
       }
-
+      // ... then proceed with:
       const relatedChannelsData = await this.makeRequest('search', {
         part: 'snippet',
         q: channelTitleQuery, // Search by original channel's title
