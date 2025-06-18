@@ -48,6 +48,7 @@ export default function Sidebar() {
       icon: <Activity size={20} />
     },
     {
+
       name: 'Arabia Comment Mapper',
       path: '/tools/arabia-comment-mapper',
       icon: <MessageSquareText size={20} />

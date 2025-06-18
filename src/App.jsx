@@ -14,6 +14,7 @@ const BulkVideoAnalyzer = lazy(() => import('./pages/tools/BulkVideoAnalyzer'));
 const SearchTool = lazy(() => import('./pages/tools/SearchTool'));
 const TrendingChecker = lazy(() => import('./pages/tools/TrendingChecker'));
 const VideoSummarizer = lazy(() => import('./pages/tools/VideoSummarizer'));
+const AIVideoSummarizer = lazy(() => import('./pages/tools/AIVideoSummarizer'));
 const ArabiaCommentMapper = lazy(() => import('./pages/tools/ArabiaCommentMapper'));
 // const LookalikeFinderPage = lazy(() => import('./pages/tools/LookalikeFinderPage')); // Removed
 const PubgMiniPage = lazy(() => import('./pages/tools/PubgMiniPage'));
@@ -85,6 +86,7 @@ function App() {
                 <PubgMiniPage />
               </Suspense>
             } />
+
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
