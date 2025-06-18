@@ -21,31 +21,68 @@ class GeminiApiService {
   }
 
   // Method to make requests to the Gemini API
-  async generateContent(apiKey, videoDetailsText) { // userBrief parameter removed
+  async generateContent(apiKey, title, description, transcript = null) { // userBrief parameter removed
     if (!apiKey) {
       throw new Error('Gemini API key is required.');
     }
-    if (!videoDetailsText || typeof videoDetailsText !== 'string' || videoDetailsText.trim() === '') {
-      // videoDetailsText is expected to contain "Title: ..." and "Description: ..."
-      throw new Error('Video details text cannot be empty.');
-    }
+    // Title or description can be empty, but prompt should still work.
+    // No specific error needed here if title/desc is empty.
 
-    const cacheKey = `geminiSummary_${videoDetailsText}`;
+    // The cache key should still distinguish between transcript and no-transcript summaries
+    const cacheKey = `geminiSummary_t:${title}_d:${description}_transcript:${transcript ? 'v2_yes' : 'v2_no'}`; // Added v2 to differentiate
     const cachedData = this._getFromCache(cacheKey);
     if (cachedData) {
       return cachedData;
     }
 
-    // New prompt structure
-    const finalPromptText = `You are an assistant that analyzes YouTube videos. Based on the following video title and description, generate a comprehensive and highly detailed summary of the video's content. Do not suggest alternative titles. Your task is only to summarize.
+    let finalPromptText;
+
+    if (transcript && transcript.trim() !== '') {
+      // New prompt from user feedback
+      finalPromptText = `You are an expert video summarization assistant. Based on the full transcript of this YouTube video, generate the following insights in both English and Arabic.
+
+Instructions:
+- Use the transcript content as your primary source of information.
+- If the transcript is in Arabic, generate Arabic outputs directly. Use English only if no Arabic text is detected.
+- Keep summaries concise, accurate, and clearly written.
+- Focus on informative and meaningful points.
+
+Respond in the following format:
+
+1. **English Summary**:
+{A concise summary of the video in English. 3–5 sentences max.}
+
+2. **Arabic Summary**:
+{A concise summary of the video in Arabic. 3–5 sentences max.}
+
+3. **Key Points in English**:
+- Point 1
+- Point 2
+- ...
+
+4. **النِّقَاط الرَّئِيسِيَّة بِاللُّغَةِ الْعَرَبِيَّة**:
+- النقطة الأولى
+- النقطة الثانية
+- ...
+
+Transcript:
+${transcript}
+`;
+    } else {
+      // Fallback to existing prompt structure if no transcript (this part remains unchanged)
+      finalPromptText = `You are an assistant that analyzes YouTube videos. Based on the following video title and description, generate a comprehensive and highly detailed summary of the video's content. Do not suggest alternative titles. Your task is only to summarize.
 
 Provide the summary in two languages:
 1. English summary
 2. Arabic summary
 
-${videoDetailsText}
+Video Title: ${title}
+
+Video Description:
+${description}
 
 Summarize with as much detail as possible from the provided text, ensuring all key points and supporting information are included. The summary should be thorough and exhaustive. Do not include suggestions, headlines, or anything unrelated to the summary itself.`;
+    }
 
     const url = `${this.baseUrl}?key=${apiKey}`;
 
