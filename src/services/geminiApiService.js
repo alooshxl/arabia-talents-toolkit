@@ -1,5 +1,6 @@
 class GeminiApiService {
   constructor() {
+    // Model can be parameterized if needed in the future e.g. gemini-1.5-pro-latest
     this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent';
     this.cache = {};
     this.cacheDuration = 60 * 60 * 1000; // 1 hour
@@ -20,53 +21,20 @@ class GeminiApiService {
     };
   }
 
-  // Method to make requests to the Gemini API
-  async generateContent(apiKey, title, description, transcript = null) { // userBrief parameter removed
+  // Unified method to generate content based on a provided prompt
+  async generateContent(apiKey, prompt, cacheKey = null) {
     if (!apiKey) {
       throw new Error('Gemini API key is required.');
     }
-    // Title or description can be empty, but prompt should still work.
-    // No specific error needed here if title/desc is empty.
-
-    const cacheKey = `geminiSummary_t:${title}_d:${description}_transcript:${transcript ? 'yes' : 'no'}`;
-    const cachedData = this._getFromCache(cacheKey);
-    if (cachedData) {
-      return cachedData;
+    if (!prompt || typeof prompt !== 'string' || prompt.trim() === '') {
+      throw new Error('Prompt cannot be empty.');
     }
 
-    let finalPromptText;
-
-    if (transcript && transcript.trim() !== '') {
-      finalPromptText = `You are an expert video summarization assistant. Based on the full transcript of this video, generate the following:
-
-1.  **English Summary:** A concise and insightful summary of the video in English.
-2.  **Arabic Summary:** A concise and insightful summary of the video in Arabic.
-3.  **Key Topics (English):** A bullet list of 5-7 key points or topics covered in the video, in English.
-4.  **Key Topics (Arabic):** A bullet list of 5-7 key points or topics covered in the video, in Arabic.
-
-Video Transcript:
----
-${transcript}
----
-
-Video Title (for context, prioritize transcript): ${title}
-Video Description (for context, prioritize transcript): ${description}
-
-Ensure the summaries are detailed and capture the main essence of the video content. Key topics should highlight the most important subjects discussed or moments in the video. Provide only the requested information in the specified numbered format.`;
-    } else {
-      // Fallback to existing prompt structure if no transcript
-      finalPromptText = `You are an assistant that analyzes YouTube videos. Based on the following video title and description, generate a comprehensive and highly detailed summary of the video's content. Do not suggest alternative titles. Your task is only to summarize.
-
-Provide the summary in two languages:
-1. English summary
-2. Arabic summary
-
-Video Title: ${title}
-
-Video Description:
-${description}
-
-Summarize with as much detail as possible from the provided text, ensuring all key points and supporting information are included. The summary should be thorough and exhaustive. Do not include suggestions, headlines, or anything unrelated to the summary itself.`;
+    const effectiveCacheKey = cacheKey || `gemini_prompt_hash:${this._hashString(prompt)}`; // Basic hash for prompt if no key
+    const cachedData = this._getFromCache(effectiveCacheKey);
+    if (cachedData) {
+      console.log(`Returning cached Gemini response for key: ${effectiveCacheKey}`);
+      return cachedData;
     }
 
     const url = `${this.baseUrl}?key=${apiKey}`;
@@ -76,17 +44,15 @@ Summarize with as much detail as possible from the provided text, ensuring all k
         {
           parts: [
             {
-              text: finalPromptText,
+              text: prompt,
             },
           ],
         },
       ],
       // Optional: Add generationConfig if needed for specific controls
       // generationConfig: {
-      //   temperature: 0.7,
-      //   topK: 1,
-      //   topP: 1,
-      //   maxOutputTokens: 2048, // Consider if this needs adjustment for dual language summaries
+      //   temperature: 0.7, // Example: Adjust creativity
+      //   maxOutputTokens: 2048, // Example: Limit response length
       // },
     };
 
@@ -100,7 +66,7 @@ Summarize with as much detail as possible from the provided text, ensuring all k
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({})); // Try to parse error, default to empty object
+        const errorData = await response.json().catch(() => ({}));
         const errorMessage = errorData?.error?.message || `Gemini API request failed: ${response.status} ${response.statusText}`;
         console.error('Gemini API Error Data:', errorData);
         throw new Error(errorMessage);
@@ -108,25 +74,39 @@ Summarize with as much detail as possible from the provided text, ensuring all k
 
       const data = await response.json();
 
-      // Basic validation of expected response structure
       if (data.candidates && data.candidates.length > 0 && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts.length > 0) {
         const responseData = data.candidates[0].content.parts[0].text;
-        this._setCache(cacheKey, responseData);
+        this._setCache(effectiveCacheKey, responseData);
         return responseData;
+      } else if (data.promptFeedback && data.promptFeedback.blockReason) {
+        // Handle cases where the prompt was blocked
+        const blockReason = data.promptFeedback.blockReason;
+        const safetyRatings = data.promptFeedback.safetyRatings || [];
+        console.error(`Gemini prompt was blocked. Reason: ${blockReason}. Safety Ratings: ${JSON.stringify(safetyRatings)}`);
+        throw new Error(`Prompt was blocked by Gemini due to: ${blockReason}. Please revise the prompt.`);
       } else {
         console.error('Unexpected Gemini API response structure:', data);
-        throw new Error('Failed to extract content from Gemini API response.');
+        throw new Error('Failed to extract content from Gemini API response or prompt was blocked without detailed feedback.');
       }
 
     } catch (error) {
       console.error('Error in generateContent:', error);
-      // Re-throw the error so it can be caught by the caller
-      // If it's already an Error object, no need to create a new one unless adding more context
       if (error instanceof Error) {
         throw error;
       }
-      throw new Error(`An unexpected error occurred while calling Gemini API: ${error.message || error}`);
+      throw new Error(`An unexpected error occurred while calling Gemini API: ${error.message || String(error)}`);
     }
+  }
+
+  // Simple hash function for creating cache keys from prompts
+  _hashString(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = (hash << 5) - hash + char;
+      hash |= 0; // Convert to 32bit integer
+    }
+    return `prompt_${hash}`;
   }
 }
 
