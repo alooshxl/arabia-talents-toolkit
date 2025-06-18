@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './contexts/AppContext';
 import Layout from './components/layout/Layout';
-import ErrorBoundary from './components/utils/ErrorBoundary'; // Added
+// import ErrorBoundary from './components/utils/ErrorBoundary'; // Removed
 import './App.css';
 
 // Lazy load tool components
@@ -15,7 +15,7 @@ const SearchTool = lazy(() => import('./pages/tools/SearchTool'));
 const TrendingChecker = lazy(() => import('./pages/tools/TrendingChecker'));
 const VideoSummarizer = lazy(() => import('./pages/tools/VideoSummarizer'));
 const ArabiaCommentMapper = lazy(() => import('./pages/tools/ArabiaCommentMapper'));
-const LookalikeFinderPage = lazy(() => import('./pages/tools/LookalikeFinderPage')); // Added
+// const LookalikeFinderPage = lazy(() => import('./pages/tools/LookalikeFinderPage')); // Removed
 const PubgMiniPage = lazy(() => import('./pages/tools/PubgMiniPage'));
 
 // Loading component
@@ -79,13 +79,7 @@ function App() {
                 <ArabiaCommentMapper />
               </Suspense>
             } />
-            <Route path="tools/lookalike-finder" element={
-              <Suspense fallback={<LoadingFallback />}>
-                <ErrorBoundary>
-                  <LookalikeFinderPage />
-                </ErrorBoundary>
-              </Suspense>
-            } />
+            {/* Lookalike Finder Route Removed */}
             <Route path="tools/pubgmini" element={
               <Suspense fallback={<LoadingFallback />}>
                 <PubgMiniPage />
