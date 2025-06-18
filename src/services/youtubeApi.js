@@ -67,14 +67,25 @@ class YouTubeApiService {
       }
     });
 
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || `API request failed: ${response.status}`);
-    }
+    try { // New try block
+      const response = await fetch(url);
 
-    return response.json();
+      if (!response.ok) {
+        // This handles API errors (e.g., 400, 403, 404)
+        const errorData = await response.json().catch(() => ({ message: 'Failed to parse error response from API' }));
+        throw new Error(errorData.error?.message || `API request failed: ${response.status}`);
+      }
+
+      // Try to parse JSON, this can also fail if response is not valid JSON
+      return await response.json();
+    } catch (error) { // New catch block
+      // Log the error for server-side/dev visibility
+      console.error('Error in makeRequest (network, JSON parsing, or API error):', error);
+      // Re-throw the error to be handled by the calling component
+      // If it's an error we've already processed (like from !response.ok), it will be rethrown.
+      // If it's a new network error or JSON parsing error, it will be thrown.
+      throw error;
+    }
   }
 
   extractChannelId(url) {

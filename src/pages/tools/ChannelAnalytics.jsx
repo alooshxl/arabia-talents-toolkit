@@ -17,12 +17,17 @@ export default function ChannelAnalytics() {
   const [monthlyBreakdown, setMonthlyBreakdown] = useState([]);
 
   const handleAnalyze = async () => {
+    let specificErrorHandled = false; // 1. Initialize flag
     if (!channelUrl.trim()) return;
     
     setIsAnalyzing(true);
     setLoading(true);
-    setError(null);
+    setError(null); // Clear previous errors
     
+    // It's important that channelData and videos are reset if a new analysis starts
+    // setChannelData(null); // Optional: Reset data explicitly if needed, though new analysis overwrites or fails
+    // setVideos([]); // Optional: Reset data explicitly
+
     try {
       // Extract channel ID from URL
       let channelId = youtubeApiService.extractChannelId(channelUrl);
@@ -53,9 +58,16 @@ export default function ChannelAnalytics() {
       setMonthlyBreakdown(breakdown);
       
     } catch (error) {
+      specificErrorHandled = true; // 2. Set flag in catch
       console.error('Error analyzing channel:', error);
       setError(error.message || 'Failed to analyze channel. Please check the URL and try again.');
     } finally {
+      // 3. Add logic in finally
+      // This check uses the component's state variables `channelData` and `videos`.
+      // These would have been updated by `setChannelData` and `setVideos` in the `try` block if successful.
+      if (!specificErrorHandled && (channelData === null || videos.length === 0)) {
+        setError("No data found or API error occurred. Please check the URL and try again.");
+      }
       setIsAnalyzing(false);
       setLoading(false);
     }
