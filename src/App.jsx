@@ -86,11 +86,7 @@ function App() {
                 <PubgMiniPage />
               </Suspense>
             } />
-            <Route path="tools/ai-video-summarizer" element={
-              <Suspense fallback={<LoadingFallback />}>
-                <AIVideoSummarizer />
-              </Suspense>
-            } />
+
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

@@ -6,7 +6,6 @@ import {
   Film, 
   Search, 
   Activity,
-  Sparkles, // Icon for AI Video Summarizer
   MessageSquareText, // Icon for Arabia Comment Mapper
   Gamepad2 // Added Gamepad2
   // Users icon removed as it was assumed to be only for Lookalike Finder
@@ -49,12 +48,7 @@ export default function Sidebar() {
       icon: <Activity size={20} />
     },
     {
-      name: 'AI Video Summarizer',
-      path: '/tools/ai-video-summarizer',
-      icon: <Sparkles size={20} />,
-      label: 'New'
-    },
-    {
+
       name: 'Arabia Comment Mapper',
       path: '/tools/arabia-comment-mapper',
       icon: <MessageSquareText size={20} />

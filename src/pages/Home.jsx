@@ -7,7 +7,7 @@ import {
   Search, 
   Activity,
   ArrowRight,
-  Sparkles,
+
   MessageSquareText // Added for Arabia Comment Mapper
   // Users icon removed
 } from 'lucide-react';
@@ -60,13 +60,7 @@ export default function Home() {
       color: 'bg-pink-100 dark:bg-pink-900'
     },
     {
-      title: 'AI Video Summarizer',
-      description: 'Summarize videos in English & Arabic with Gemini + subtitles.',
-      icon: <Sparkles size={24} />,
-      path: '/tools/ai-video-summarizer',
-      color: 'bg-purple-100 dark:bg-purple-900',
-    },
-    {
+
       title: 'Arabia Comment Mapper',
       description: 'Analyze YouTube comments to estimate commenter nationality from Arab countries using channel data and AI dialect analysis.',
       icon: <MessageSquareText size={24} />,
