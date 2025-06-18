@@ -15,12 +15,13 @@ export default function BulkChannelAnalyzer() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const handleAnalyze = async () => {
+    let specificErrorHandled = false; // 1. Initialize flag
     if (!channelUrls.trim()) return;
     
     setIsAnalyzing(true);
     setLoading(true);
-    setError(null);
-    setResults([]);
+    setError(null); // Clear previous errors
+    setResults([]); // Clear previous results
     
     try {
       const urls = parseBulkInput(channelUrls);
@@ -79,9 +80,15 @@ export default function BulkChannelAnalyzer() {
       setResults(analysisResults);
       
     } catch (error) {
+      specificErrorHandled = true; // 2. Set flag in outer catch
       console.error('Error analyzing channels:', error);
       setError(error.message || 'Failed to analyze channels. Please try again.');
     } finally {
+      // 4. Add logic in finally
+      // This check uses the component's state variable `results`.
+      if (!specificErrorHandled && results.length === 0) {
+        setError("No data found for any of the provided channels or an API error occurred. Please check the URLs and try again.");
+      }
       setIsAnalyzing(false);
       setLoading(false);
     }

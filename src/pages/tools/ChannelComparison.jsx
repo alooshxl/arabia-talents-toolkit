@@ -20,12 +20,13 @@ export default function ChannelComparison() {
   const [channelPrices, setChannelPrices] = useState({});
 
   const handleAnalyze = async () => {
+    let specificErrorHandled = false; // 1. Initialize flag
     if (!channelUrls.trim()) return;
     
     setIsAnalyzing(true);
     setLoading(true);
-    setError(null);
-    setChannelsData([]);
+    setError(null); // Clear previous errors
+    setChannelsData([]); // Clear previous results
     
     try {
       // Parse bulk input
@@ -116,10 +117,19 @@ export default function ChannelComparison() {
       
       setChannelsData(results);
       
+      // If results is empty here, it means all individual channels failed processing
+      // The check in `finally` will handle this.
+
     } catch (error) {
+      specificErrorHandled = true; // 2. Set flag in outer catch
       console.error('Error comparing channels:', error);
       setError(error.message || 'Failed to compare channels. Please check the URLs and try again.');
     } finally {
+      // 4. Add logic in finally
+      // This check uses the component's state variable `channelsData`.
+      if (!specificErrorHandled && channelsData.length === 0) {
+        setError("No data found for any of the provided channels or an API error occurred. Please check the URLs and try again.");
+      }
       setIsAnalyzing(false);
       setLoading(false);
     }
