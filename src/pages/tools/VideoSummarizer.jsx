@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { useAppContext } from '@/contexts/AppContext';
 import youtubeApiService from '@/services/youtubeApi';
 import geminiApiService from '@/services/geminiApiService';
+import ErrorBoundary from '@/components/utils/ErrorBoundary';
 
 // Helper function to extract Video ID
 function extractVideoIdFromUrl(url) {
@@ -44,20 +45,27 @@ export default function VideoSummarizer() {
   const [videoDescription, setVideoDescription] = useState('');
   const [englishSummary, setEnglishSummary] = useState('');
   const [arabicSummary, setArabicSummary] = useState('');
+  const [englishKeyPoints, setEnglishKeyPoints] = useState('');
+  const [arabicKeyPoints, setArabicKeyPoints] = useState('');
+  const [transcriptNotice, setTranscriptNotice] = useState('');
   // const [isLoading, setIsLoading] = useState(false); // Removed local loading state
 
   const handleSummarize = async () => {
+    setError(null); // Clear previous errors first
     if (!geminiApiKey) {
       setError('Gemini API key is not set. Please set it in the header.');
       return;
     }
 
     setLoading(true);
-    setError(null);
+    // setError(null); // Moved up
     setVideoTitle('');
     setVideoDescription('');
     setEnglishSummary('');
     setArabicSummary('');
+    setEnglishKeyPoints('');
+    setArabicKeyPoints('');
+    setTranscriptNotice('');
 
     try {
       const videoId = extractVideoIdFromUrl(videoUrl);
@@ -87,68 +95,94 @@ export default function VideoSummarizer() {
         return;
       }
 
-      // Simplified prompt, as the detailed structure is in geminiApiService now
-      const prompt = `Video Title: ${currentVideoTitle}
+      let transcript = null;
+      try {
+        console.log(`Fetching transcript for video ID: ${videoId}`);
+        transcript = await youtubeApiService.getVideoTranscript(videoId);
+        if (transcript && transcript.trim() !== '') {
+          console.log('Successfully fetched transcript.');
+          setTranscriptNotice('Transcript found. Summary will be based on the full video content.');
+        } else {
+          console.log('Transcript not available or empty.');
+          // transcript might be null or empty string here
+          transcript = null; // Ensure it's strictly null if empty for downstream logic
+          setTranscriptNotice('Transcript not available or empty. Summarizing based on video title and description.');
+        }
+      } catch (transcriptError) {
+        console.error('Failed to fetch video transcript:', transcriptError);
+        // Append to existing error if any, or set new one.
+        setError(prevError => prevError ? `${prevError}\nCould not fetch transcript: ${transcriptError.message}` : `Could not fetch transcript: ${transcriptError.message}`);
+        setTranscriptNotice('Error fetching transcript. Summarizing based on video title and description.');
+        // Do not return; proceed with title/description summary
+      }
 
-Video Description:
-${currentVideoDescription}`;
+      console.log('Transcript used for summarization:', !!transcript);
 
       try {
-        const responseText = await geminiApiService.generateContent(geminiApiKey, prompt);
+        const responseText = await geminiApiService.generateContent(geminiApiKey, currentVideoTitle, currentVideoDescription, transcript);
+        console.log('Gemini raw response:', responseText);
 
-        let parsedEnglishSummary = 'English summary not found in response.';
-        let parsedArabicSummary = 'Arabic summary not found in response.';
+        let parsedEnglishSummary = 'English summary not found.';
+        let parsedArabicSummary = 'Arabic summary not found.';
+        let parsedEnglishKeyPoints = ''; // Default to empty string
+        let parsedArabicKeyPoints = '';   // Default to empty string
 
-        // Regex to find "1. English summary" followed by its content,
-        // until "2. Arabic summary" or end of string.
-        const englishMatch = responseText.match(/1\.\s*English summary\s*([\s\S]*?)(?=\s*2\.\s*Arabic summary|$)/i);
-        if (englishMatch && englishMatch[1]) {
-          parsedEnglishSummary = englishMatch[1].trim();
-        }
+        if (transcript) { // New parsing logic for transcript-based response
+          // English Summary
+          const englishSummaryMatch = responseText.match(/1\.\s*\*\*English Summary:\*\*\s*([\s\S]*?)(?=\n\s*2\.\s*\*\*Arabic Summary:\*\*|$)/i);
+          parsedEnglishSummary = englishSummaryMatch && englishSummaryMatch[1] ? englishSummaryMatch[1].trim() : 'English summary not found.';
 
-        // Regex to find "2. Arabic summary" followed by its content.
-        const arabicMatch = responseText.match(/2\.\s*Arabic summary\s*([\s\S]*)/i);
-        if (arabicMatch && arabicMatch[1]) {
-          parsedArabicSummary = arabicMatch[1].trim();
-        }
+          // Arabic Summary
+          const arabicSummaryMatch = responseText.match(/2\.\s*\*\*Arabic Summary:\*\*\s*([\s\S]*?)(?=\n\s*3\.\s*\*\*Key Topics \(English\):\*\*|$)/i);
+          parsedArabicSummary = arabicSummaryMatch && arabicSummaryMatch[1] ? arabicSummaryMatch[1].trim() : 'Arabic summary not found.';
 
-        // A simple fallback if the numbered list isn't matched perfectly but the headers might be there:
-        if (parsedEnglishSummary.includes('not found') && parsedArabicSummary.includes('not found')) {
-            if (responseText.toLowerCase().includes('english summary') && responseText.toLowerCase().includes('arabic summary')) {
-                 // This is a very basic fallback, might need more sophisticated logic
-                 // if Gemini's output varies a lot without strict numbering.
-                 // For now, it acknowledges that the response might exist but wasn't parsed by primary regex.
-                 // Consider splitting based on "Arabic Summary" and then cleaning up "English Summary" part.
-                const arabicSplit = responseText.split(/arabic summary/i);
-                if (arabicSplit.length > 1) {
-                    parsedArabicSummary = arabicSplit[1].trim().startsWith(':') ? arabicSplit[1].trim().substring(1).trim() : arabicSplit[1].trim();
-                    const englishPart = arabicSplit[0];
-                    const englishSplit = englishPart.split(/english summary/i);
-                    if (englishSplit.length > 1) {
-                         parsedEnglishSummary = englishSplit[1].trim().startsWith(':') ? englishSplit[1].trim().substring(1).trim() : englishSplit[1].trim();
+          // English Key Points
+          const englishKeyPointsMatch = responseText.match(/3\.\s*\*\*Key Topics \(English\):\*\*\s*([\s\S]*?)(?=\n\s*4\.\s*\*\*Key Topics \(Arabic\):\*\*|$)/i);
+          parsedEnglishKeyPoints = englishKeyPointsMatch && englishKeyPointsMatch[1] ? englishKeyPointsMatch[1].trim() : 'English key points not found.';
+
+          // Arabic Key Points
+          const arabicKeyPointsMatch = responseText.match(/4\.\s*\*\*Key Topics \(Arabic\):\*\*\s*([\s\S]*)/i);
+          parsedArabicKeyPoints = arabicKeyPointsMatch && arabicKeyPointsMatch[1] ? arabicKeyPointsMatch[1].trim() : 'Arabic key points not found.';
+
+        } else { // Fallback to old format if no transcript was used
+            const oldEnglishMatch = responseText.match(/1\.\s*English summary\s*([\s\S]*?)(?=\s*2\.\s*Arabic summary|$)/i);
+            if (oldEnglishMatch && oldEnglishMatch[1]) parsedEnglishSummary = oldEnglishMatch[1].trim();
+
+            const oldArabicMatch = responseText.match(/2\.\s*Arabic summary\s*([\s\S]*)/i);
+            if (oldArabicMatch && oldArabicMatch[1]) parsedArabicSummary = oldArabicMatch[1].trim();
+
+            // Fallback for very basic non-numbered responses if no transcript
+            if (parsedEnglishSummary.includes('not found') && parsedArabicSummary.includes('not found')) {
+                 if (responseText.toLowerCase().includes('english summary') && responseText.toLowerCase().includes('arabic summary')) {
+                    const arabicSplit = responseText.split(/arabic summary/i);
+                    if (arabicSplit.length > 1) {
+                        parsedArabicSummary = arabicSplit[1].trim().startsWith(':') ? arabicSplit[1].trim().substring(1).trim() : arabicSplit[1].trim();
+                        const englishPart = arabicSplit[0];
+                        const englishSplit = englishPart.split(/english summary/i);
+                        if (englishSplit.length > 1) {
+                             parsedEnglishSummary = englishSplit[1].trim().startsWith(':') ? englishSplit[1].trim().substring(1).trim() : englishSplit[1].trim();
+                        } else {
+                            parsedEnglishSummary = englishPart.trim();
+                        }
                     } else {
-                        parsedEnglishSummary = englishPart.trim(); // Might contain "English Summary" header
+                        const englishSplitOnly = responseText.split(/english summary/i);
+                         if (englishSplitOnly.length > 1) {
+                             parsedEnglishSummary = englishSplitOnly[1].trim().startsWith(':') ? englishSplitOnly[1].trim().substring(1).trim() : englishSplitOnly[1].trim();
+                         }
                     }
-                } else {
-                    // If no "Arabic Summary", maybe whole thing is English or unparseable
-                    const englishSplitOnly = responseText.split(/english summary/i);
-                     if (englishSplitOnly.length > 1) {
-                         parsedEnglishSummary = englishSplitOnly[1].trim().startsWith(':') ? englishSplitOnly[1].trim().substring(1).trim() : englishSplitOnly[1].trim();
-                     } else {
-                        // If neither specific header is found, assign whole response to English summary as a last resort.
-                        // parsedEnglishSummary = responseText; // Or keep 'not found'
-                     }
                 }
             }
         }
 
-
         setEnglishSummary(parsedEnglishSummary);
         setArabicSummary(parsedArabicSummary);
+        setEnglishKeyPoints(parsedEnglishKeyPoints);
+        setArabicKeyPoints(parsedArabicKeyPoints);
 
       } catch (geminiError) {
         console.error('Gemini API Error:', geminiError);
-        setError(`Failed to generate content with Gemini: ${geminiError.message}`);
+        // Append to existing error if any (e.g. from transcript fetch)
+        setError(prevError => prevError ? `${prevError}\nFailed to generate content with Gemini: ${geminiError.message}` : `Failed to generate content with Gemini: ${geminiError.message}`);
       }
 
     } catch (error) { // Catch errors from video ID extraction or other unexpected issues
@@ -160,17 +194,21 @@ ${currentVideoDescription}`;
   };
 
   return (
-    <div className="container mx-auto">
-      <h1 className="text-3xl font-bold mb-6">AI Video Summarizer & Topic Extractor</h1>
+    <ErrorBoundary>
+      <div className="container mx-auto">
+        <h1 className="text-3xl font-bold mb-6">AI Video Summarizer & Topic Extractor</h1>
 
-      <Card className="mb-8">
+        <Card className="mb-8">
         <CardHeader>
           <CardTitle>Enter Video URL</CardTitle>
           <CardDescription>
-            Paste a YouTube video URL below to get its summary and key topics.
+            Paste a YouTube video URL below. If available, its transcript will be used for a detailed summary and key topics. Otherwise, title and description will be used.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {transcriptNotice && (
+            <p className="text-sm text-muted-foreground py-2 px-3 bg-secondary border border-border rounded-md">{transcriptNotice}</p>
+          )}
           <div>
             <Label htmlFor="videoUrlInput">YouTube Video URL</Label>
             <Input
@@ -188,7 +226,7 @@ ${currentVideoDescription}`;
         </CardContent>
       </Card>
 
-      { !isLoading && (videoTitle || videoDescription || englishSummary || arabicSummary) && (
+      { !isLoading && (videoTitle || videoDescription || englishSummary || arabicSummary || englishKeyPoints || arabicKeyPoints || (transcriptNotice && !error) ) && (
         <div className="space-y-6 mt-8">
           <Card>
             <CardHeader><CardTitle>Video Details</CardTitle></CardHeader>
@@ -201,16 +239,42 @@ ${currentVideoDescription}`;
           </Card>
 
           <Card>
-            <CardHeader><CardTitle>AI Generated Summaries</CardTitle></CardHeader>
+            <CardHeader><CardTitle>AI Generated Content</CardTitle></CardHeader>
             <CardContent>
               <h3 className="font-semibold mb-1 mt-4">English Summary:</h3>
               <p className="text-muted-foreground mb-3 whitespace-pre-wrap">{englishSummary || 'Not generated or not available yet.'}</p>
+
               <h3 className="font-semibold mb-1 mt-4">Arabic Summary:</h3>
-              <p className="text-muted-foreground whitespace-pre-wrap" dir="rtl">{arabicSummary || 'Not generated or not available yet.'}</p>
+              <p className="text-muted-foreground mb-3 whitespace-pre-wrap" dir="rtl">{arabicSummary || 'Not generated or not available yet.'}</p>
+
+              { (englishKeyPoints || arabicKeyPoints) && (
+                <>
+                  <h3 className="font-semibold mb-1 mt-4">Key Topics (English):</h3>
+                  {englishKeyPoints && englishKeyPoints !== 'English key points not found.' ? (
+                    <ul className="list-disc pl-5 text-muted-foreground whitespace-pre-wrap">
+                      {englishKeyPoints.split('\n').map((point, index) => {
+                        const trimmedPoint = point.replace(/^- /,'').trim(); // Remove leading dashes if present
+                        return trimmedPoint && <li key={index}>{trimmedPoint}</li>;
+                      })}
+                    </ul>
+                  ) : <p className="text-muted-foreground">Not generated or not available yet.</p>}
+
+                  <h3 className="font-semibold mb-1 mt-4">Key Topics (Arabic):</h3>
+                  {arabicKeyPoints && arabicKeyPoints !== 'Arabic key points not found.' ? (
+                    <ul className="list-disc pr-5 text-muted-foreground whitespace-pre-wrap" dir="rtl">
+                      {arabicKeyPoints.split('\n').map((point, index) => {
+                        const trimmedPoint = point.replace(/^- /,'').trim(); // Remove leading dashes if present
+                        return trimmedPoint && <li key={index}>{trimmedPoint}</li>;
+                      })}
+                    </ul>
+                  ) : <p className="text-muted-foreground">Not generated or not available yet.</p>}
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
       )}
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }
