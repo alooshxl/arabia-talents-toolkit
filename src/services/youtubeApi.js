@@ -24,6 +24,137 @@ class YouTubeApiService {
     return localStorage.getItem('youtube-api-key') || '';
   }
 
+  _parseSrtToPlainText(srtText) {
+    if (!srtText || typeof srtText !== 'string') return '';
+    let text = srtText;
+    // Remove WEBVTT header and specific VTT metadata lines more robustly
+    text = text.replace(/^WEBVTT(\s.*|\n.*)*\n\n/m, '');
+    text = text.replace(/^Kind:[^\n]*\n/m, '');
+    text = text.replace(/^Language:[^\n]*\n/m, '');
+    // Remove style blocks in VTT files
+    text = text.replace(/^STYLE\s*\n([\s\S]*?)\n\n/gm, '');
+    // Remove VTT region blocks
+    text = text.replace(/^REGION\s*\n([\s\S]*?)\n\n/gm, '');
+    // Remove lines with only "NOTE" or other metadata keywords if they appear alone
+    text = text.replace(/^NOTE[^\n]*\n/gm, '');
+    // Remove timestamps (e.g., 00:00:20,000 --> 00:00:24,166 or 00:00:20.000 --> 00:00:24.166)
+    // This regex also removes the line break following the timestamp line.
+    text = text.replace(/\d{2}:\d{2}:\d{2}[,\.]\d{3}\s-->\s\d{2}:\d{2}:\d{2}[,\.]\d{3}(.*)\r?\n/g, '');
+    // Remove sequence numbers (lines that are just numbers followed by a newline)
+    text = text.replace(/^\d+\s*\r?\n/gm, '');
+    // Remove any kind of HTML-like tags (e.g., <b>, <i>, <c.colorE5E5E5>)
+    text = text.replace(/<[^>]*>/g, '');
+    // Normalize newlines and remove multiple blank lines, then join words with single spaces
+    return text
+      .split(/\r?\n/)
+      .map(line => line.trim())
+      .filter(line => line) // Remove empty lines resulting from previous replacements
+      .join(' ')
+      .trim();
+  }
+
+  async getVideoTranscript(videoId) {
+    const cacheKey = `transcript_${videoId}`;
+    const cachedData = this._getFromCache(cacheKey);
+    if (cachedData) {
+      console.log(`Returning cached transcript for video ID: ${videoId}`);
+      return cachedData;
+    }
+
+    const apiKey = this.getApiKey();
+    if (!apiKey) {
+      console.error('YouTube API key is required to fetch transcript. Please set it.');
+      return null;
+    }
+
+    try {
+      const listUrl = `${this.baseUrl}/captions?part=snippet&videoId=${videoId}&key=${apiKey}`;
+      const listResponse = await fetch(listUrl);
+
+      if (!listResponse.ok) {
+        let errorMsg = `Failed to list captions: ${listResponse.status}`;
+        try {
+          const errorData = await listResponse.json();
+          errorMsg += ` - ${errorData.error?.message || 'No additional error message provided.'}`;
+        } catch (e) {
+          // Ignore if parsing error response fails
+        }
+        console.error(errorMsg);
+        return null;
+      }
+
+      const captionListData = await listResponse.json();
+      console.log('Caption list response for video ID', videoId, ':', captionListData);
+
+      if (!captionListData.items || captionListData.items.length === 0) {
+        console.log(`No caption tracks found for video ID: ${videoId}`);
+        return null;
+      }
+
+      let selectedTrack = null;
+      const tracks = captionListData.items;
+
+      // Priority 1: Arabic Official
+      selectedTrack = tracks.find(track => track.snippet.language === 'ar' && track.snippet.trackKind === 'standard');
+
+      // Priority 2: Arabic ASR
+      if (!selectedTrack) {
+        selectedTrack = tracks.find(track => track.snippet.language === 'ar' && track.snippet.trackKind === 'ASR');
+      }
+
+      // Priority 3: English Official
+      if (!selectedTrack) {
+        selectedTrack = tracks.find(track => track.snippet.language === 'en' && track.snippet.trackKind === 'standard');
+      }
+
+      // Priority 4: English ASR
+      if (!selectedTrack) {
+        selectedTrack = tracks.find(track => track.snippet.language === 'en' && track.snippet.trackKind === 'ASR');
+      }
+
+      if (!selectedTrack) {
+        console.log(`No suitable caption track found for video ID (Priority: Ar-Std, Ar-ASR, En-Std, En-ASR): ${videoId}`);
+        return null;
+      }
+
+      const captionId = selectedTrack.id;
+      console.log(`Selected caption track ID: ${captionId} (Language: ${selectedTrack.snippet.language}, Kind: ${selectedTrack.snippet.trackKind})`);
+
+      const downloadUrl = `${this.baseUrl}/captions/${captionId}?key=${apiKey}&tfmt=srt`;
+      const downloadResponse = await fetch(downloadUrl);
+
+      if (!downloadResponse.ok) {
+        let errorDetail = 'Failed to download transcript.';
+        try {
+            const errorData = await downloadResponse.json(); // YouTube API might return JSON error for caption downloads
+            errorDetail = errorData.error?.message || errorDetail;
+        } catch (e) {
+            // if response is not JSON, use the status text or default message
+            errorDetail = downloadResponse.statusText || errorDetail;
+        }
+        console.error(`Failed to download transcript for caption ID ${captionId}: ${downloadResponse.status}. Detail: ${errorDetail}`);
+        return null;
+      }
+
+      const srtTranscript = await downloadResponse.text();
+      const plainTextTranscript = this._parseSrtToPlainText(srtTranscript);
+
+      if (!plainTextTranscript || plainTextTranscript.trim() === '') {
+        // Enhanced log:
+        console.log(`Parsed transcript is empty for video ID: ${videoId}. Original SRT length: ${srtTranscript ? srtTranscript.length : 'N/A'}`);
+        return null;
+      }
+
+      console.log(`Successfully fetched and parsed transcript for video ID: ${videoId}. Length: ${plainTextTranscript.length}`);
+      this._setCache(cacheKey, plainTextTranscript);
+      return plainTextTranscript;
+
+    } catch (error) {
+      console.error(`Error in getVideoTranscript for video ID ${videoId}:`, error);
+      return null;
+    }
+  }
+
   extractVideoIdFromUrl(url) {
     if (!url) return null;
     try {
