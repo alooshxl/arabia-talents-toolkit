@@ -125,40 +125,41 @@ export default function VideoSummarizer() {
         let parsedEnglishSummary = 'English summary not found.';
         let parsedArabicSummary = 'Arabic summary not found.';
         let parsedEnglishKeyPoints = ''; // Default to empty string
-        let parsedArabicKeyPoints = 'Arabic key points not found.';   // Initialize with a default "not found" message
+let parsedEnglishSummary = 'English summary not found.';
+let parsedArabicSummary = 'Arabic summary not found.';
+let parsedEnglishKeyPoints = 'English key points not found.';
+let parsedArabicKeyPoints = 'Arabic key points not found.';
 
-        if (transcript && transcript.trim() !== '') { // Ensure transcript is non-empty before using transcript-based parsing
-          // 1. English Summary
-          const englishSummaryMatch = responseText.match(/1\.\s*\*\*English Summary\*\*:\s*([\s\S]*?)(?=\n\s*2\.\s*\*\*Arabic Summary\*\*|$)/i);
-          if (englishSummaryMatch && englishSummaryMatch[1]) {
-            parsedEnglishSummary = englishSummaryMatch[1].trim().replace(/^\{([\s\S]*)\}$/, '$1').trim();
-          }
+if (transcript && transcript.trim() !== '') {
+  // 1. English Summary
+  const englishSummaryMatch = responseText.match(/1\.\s*\*\*English Summary\*\*:\s*([\s\S]*?)(?=\n\s*2\.\s*\*\*Arabic Summary\*\*|$)/i);
+  if (englishSummaryMatch && englishSummaryMatch[1]) {
+    parsedEnglishSummary = englishSummaryMatch[1].trim().replace(/^\{([\s\S]*)\}$/, '$1').trim();
+  }
 
-          // 2. Arabic Summary
-          const arabicSummaryMatch = responseText.match(/2\.\s*\*\*Arabic Summary\*\*:\s*([\s\S]*?)(?=\n\s*3\.\s*\*\*Key Points in English\*\*|$)/i);
-          if (arabicSummaryMatch && arabicSummaryMatch[1]) {
-            parsedArabicSummary = arabicSummaryMatch[1].trim().replace(/^\{([\s\S]*)\}$/, '$1').trim();
-          }
+  // 2. Arabic Summary
+  const arabicSummaryMatch = responseText.match(/2\.\s*\*\*Arabic Summary\*\*:\s*([\s\S]*?)(?=\n\s*3\.\s*\*\*Key Points in English\*\*|$)/i);
+  if (arabicSummaryMatch && arabicSummaryMatch[1]) {
+    parsedArabicSummary = arabicSummaryMatch[1].trim().replace(/^\{([\s\S]*)\}$/, '$1').trim();
+  }
 
-          // 3. Key Points in English
-          const englishKeyPointsMatch = responseText.match(/3\.\s*\*\*Key Points in English\*\*:\s*([\s\S]*?)(?=\n\s*4\.\s*\*\*النِّقَاط الرَّئِيسِيَّة بِاللُّغَةِ الْعَرَبِيَّة\*\*|$)/i);
-          if (englishKeyPointsMatch && englishKeyPointsMatch[1]) {
-            parsedEnglishKeyPoints = englishKeyPointsMatch[1].trim();
-          }
+  // 3. Key Points in English
+  const englishKeyPointsMatch = responseText.match(/3\.\s*\*\*Key Points in English\*\*:\s*([\s\S]*?)(?=\n\s*4\.\s*\*{2}النِّقَاط الرَّئِيسِيَّة بِاللُّغَةِ الْعَرَبِيَّة\*{2}|$)/i);
+  if (englishKeyPointsMatch && englishKeyPointsMatch[1]) {
+    parsedEnglishKeyPoints = englishKeyPointsMatch[1].trim();
+  }
 
-          // 4. النِّقَاط الرَّئِيسِيَّة بِاللُّغَةِ الْعَرَبِيَّة (Arabic Key Points)
-          const arabicKeyPointsMatch = responseText.match(/4\.\s*\*\*النِّقَاط الرَّئِيسِيَّة بِاللُّغَةِ الْعَرَبِيَّة\*\*:\s*([\s\S]*)/i);
-          if (arabicKeyPointsMatch && arabicKeyPointsMatch[1]) {
-            parsedArabicKeyPoints = arabicKeyPointsMatch[1].trim();
-          }
+  // 4. Arabic Key Points
+  const arabicKeyPointsMatch = responseText.match(/4\.\s*\*\*النِّقَاط الرَّئِيسِيَّة بِاللُّغَةِ الْعَرَبِيَّة\*\*:\s*([\s\S]*)/i);
+  if (arabicKeyPointsMatch && arabicKeyPointsMatch[1]) {
+    parsedArabicKeyPoints = arabicKeyPointsMatch[1].trim();
+  }
 
-          // If after attempting to parse 4 parts, some are still "not found", it indicates a format mismatch from Gemini.
-          // No explicit fallback to 2-part summary here *if a transcript was used*, as the prompt requested 4 parts.
-          // The "not found" messages will be displayed.
-
-        } else { // Fallback to old format if no transcript was used
-            parsedEnglishKeyPoints = ''; // Ensure key points are empty if no transcript
-            parsedArabicKeyPoints = '';  // Ensure key points are empty if no transcript
+} else {
+  // Fallback if no transcript was used
+  parsedEnglishKeyPoints = '';
+  parsedArabicKeyPoints = '';
+}
 
             const oldEnglishMatch = responseText.match(/1\.\s*English summary\s*([\s\S]*?)(?=\s*2\.\s*Arabic summary|$)/i);
             if (oldEnglishMatch && oldEnglishMatch[1]) parsedEnglishSummary = oldEnglishMatch[1].trim();

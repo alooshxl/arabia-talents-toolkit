@@ -28,18 +28,18 @@ class GeminiApiService {
     // Title or description can be empty, but prompt should still work.
     // No specific error needed here if title/desc is empty.
 
-    // The cache key should still distinguish between transcript and no-transcript summaries
-    const cacheKey = `geminiSummary_t:${title}_d:${description}_transcript:${transcript ? 'v2_yes' : 'v2_no'}`; // Added v2 to differentiate
-    const cachedData = this._getFromCache(cacheKey);
-    if (cachedData) {
-      return cachedData;
-    }
+// The cache key should still distinguish between transcript and no-transcript summaries
+const cacheKey = `geminiSummary_t:${title}_d:${description}_transcript:${transcript ? 'v2_yes' : 'v2_no'}`; // Added v2 to differentiate
+const cachedData = this._getFromCache(cacheKey);
+if (cachedData) {
+  return cachedData;
+}
 
-    let finalPromptText;
+let finalPromptText;
 
-    if (transcript && transcript.trim() !== '') {
-      // New prompt from user feedback
-      finalPromptText = `You are an expert video summarization assistant. Based on the full transcript of this YouTube video, generate the following insights in both English and Arabic.
+if (transcript && transcript.trim() !== '') {
+  // New prompt based on transcript, supports Arabic and key points
+  finalPromptText = `You are an expert video summarization assistant. Based on the full transcript of this YouTube video, generate the following insights in both English and Arabic.
 
 Instructions:
 - Use the transcript content as your primary source of information.
@@ -68,8 +68,21 @@ Respond in the following format:
 Transcript:
 ${transcript}
 `;
-    } else {
-      // Fallback to existing prompt structure if no transcript (this part remains unchanged)
+} else {
+  // Fallback prompt without transcript
+  finalPromptText = `You are an expert video summarization assistant. Based on the video title and description, generate the following:
+
+1.  **English Summary:** A concise and insightful summary of the video in English.
+2.  **Arabic Summary:** A concise and insightful summary of the video in Arabic.
+3.  **Key Topics (English):** A bullet list of 5-7 key points or topics covered in the video, in English.
+4.  **Key Topics (Arabic):** A bullet list of 5-7 key points or topics covered in the video, in Arabic.
+
+Video Title: ${title}
+Video Description: ${description}
+
+Ensure the summaries are meaningful and highlight the main ideas of the video. Return only the requested content in the specified numbered format.`;
+}
+
       finalPromptText = `You are an assistant that analyzes YouTube videos. Based on the following video title and description, generate a comprehensive and highly detailed summary of the video's content. Do not suggest alternative titles. Your task is only to summarize.
 
 Provide the summary in two languages:

@@ -84,50 +84,48 @@ class YouTubeApiService {
       }
 
       const captionListData = await listResponse.json();
-      // console.log('Caption list response for video ID', videoId, ':', captionListData); // Original log, can be removed or kept. Let's keep it for now.
-      console.log('Full caption list response for video ID', videoId, ':', JSON.stringify(captionListData, null, 2));
+// Log full caption list response (for debugging)
+console.log('Full caption list response for video ID', videoId, ':', JSON.stringify(captionListData, null, 2));
 
+// New Pre-selection Log:
+if (captionListData.items && captionListData.items.length > 0) {
+  console.log(`Available caption tracks for video ID ${videoId}:`);
+  captionListData.items.forEach(track => {
+    const lang = track.snippet?.language || 'undefined';
+    const kind = track.snippet?.trackKind || 'undefined';
+    console.log(`  - Language: ${lang}, Kind: ${kind}, ID: ${track.id}`);
+  });
+} else {
+  console.log(`No caption tracks listed in API response items for video ID ${videoId}`);
+}
 
-      // New Pre-selection Log:
-      if (captionListData.items && captionListData.items.length > 0) {
-        console.log(`Available caption tracks for video ID ${videoId}:`);
-        captionListData.items.forEach(track => {
-          // Ensure snippet and language exist before trying to access startsWith
-          const lang = track.snippet && track.snippet.language ? track.snippet.language : 'undefined';
-          const kind = track.snippet && track.snippet.trackKind ? track.snippet.trackKind : 'undefined';
-          console.log(`  - Language: ${lang}, Kind: ${kind}, ID: ${track.id}`);
-        });
-      } else {
-        // This log is slightly different from the one in the original if block below,
-        // specifically to make it clear it's from this pre-selection logging stage.
-        console.log(`No caption tracks listed in API response items for video ID ${videoId}`);
-      }
+// General fallback log
+if (!captionListData.items || captionListData.items.length === 0) {
+  console.log(`No caption tracks found (items array empty or missing) for video ID: ${videoId}`);
+  return null;
+}
 
-      if (!captionListData.items || captionListData.items.length === 0) {
-        // This existing log is more general if items array itself is missing/empty.
-        console.log(`No caption tracks found (items array empty or missing) for video ID: ${videoId}`);
-        return null;
-      }
+let selectedTrack = null;
+const tracks = captionListData.items;
 
-      let selectedTrack = null;
-      const tracks = captionListData.items;
+// Priority 1: Arabic Official
+selectedTrack = tracks.find(track => track.snippet?.language?.startsWith('ar') && track.snippet.trackKind === 'standard');
 
-      // Priority 1: Arabic Official
-      selectedTrack = tracks.find(track => track.snippet && track.snippet.language && track.snippet.language.startsWith('ar') && track.snippet.trackKind === 'standard');
+// Priority 2: Arabic ASR
+if (!selectedTrack) {
+  selectedTrack = tracks.find(track => track.snippet?.language?.startsWith('ar') && track.snippet.trackKind === 'ASR');
+}
 
-      // Priority 2: Arabic ASR
-      if (!selectedTrack) {
-        selectedTrack = tracks.find(track => track.snippet && track.snippet.language && track.snippet.language.startsWith('ar') && track.snippet.trackKind === 'ASR');
-      }
+// Priority 3: English Official
+if (!selectedTrack) {
+  selectedTrack = tracks.find(track => track.snippet?.language?.startsWith('en') && track.snippet.trackKind === 'standard');
+}
 
-      // Priority 3: English Official
-      if (!selectedTrack) {
-        selectedTrack = tracks.find(track => track.snippet && track.snippet.language && track.snippet.language.startsWith('en') && track.snippet.trackKind === 'standard');
-      }
+// Priority 4: English ASR
+if (!selectedTrack) {
+  selectedTrack = tracks.find(track => track.snippet?.language?.startsWith('en') && track.snippet.trackKind === 'ASR');
+}
 
-      // Priority 4: English ASR
-      if (!selectedTrack) {
-        selectedTrack = tracks.find(track => track.snippet && track.snippet.language && track.snippet.language.startsWith('en') && track.snippet.trackKind === 'ASR');
       }
 
       if (!selectedTrack) {
@@ -160,6 +158,7 @@ class YouTubeApiService {
       if (!plainTextTranscript || plainTextTranscript.trim() === '') {
         // Enhanced log:
         console.log(`Parsed transcript is empty for video ID: ${videoId}. Original SRT length: ${srtTranscript ? srtTranscript.length : 'N/A'}`);
+
         return null;
       }
 
