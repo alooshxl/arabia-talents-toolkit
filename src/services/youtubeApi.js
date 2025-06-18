@@ -142,6 +142,8 @@ class YouTubeApiService {
       if (!plainTextTranscript || plainTextTranscript.trim() === '') {
         // Enhanced log:
         console.log(`Parsed transcript is empty for video ID: ${videoId}. Original SRT length: ${srtTranscript ? srtTranscript.length : 'N/A'}`);
+
+
         return null;
       }
 
