@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { skyImage, cloudImage, pubgPlayerImage } from '../../assets/base64Images.js';
 
 // Define constants that are not difficulty-dependent
 const PLAYER_WIDTH = 40;
@@ -7,7 +8,25 @@ const OBSTACLE_WIDTH = 40;
 const OBSTACLE_HEIGHT = 40;
 const GRAVITY = 0.55; // Slight decrease to make jump feel a bit floatier and longer
 const BASE_PLAYER_JUMP_VELOCITY = 15; // Base jump velocity, might be adjusted by difficulty
-const SOCIAL_MEDIA_ICONS = ['YouTube', 'TikTok', 'Insta', 'Facebook'];
+const SOCIAL_MEDIA_ICONS = ['YouTube', 'Facebook', 'Twitter', 'TikTok', 'Instagram', 'Twitch'];
+
+const SOCIAL_MEDIA_COLORS = {
+  YouTube: '#FF0000',
+  Facebook: '#1877F2',
+  Twitter: '#000000',
+  TikTok: '#000000',
+  Instagram: '#E1306C',
+  Twitch: '#9146FF',
+};
+
+const SOCIAL_MEDIA_IMAGES = {
+  YouTube: '/assets/youtube.svg',
+  Facebook: '/assets/facebook.svg',
+  Twitter: '/assets/twitter.svg',
+  TikTok: '/assets/tiktok.svg',
+  Instagram: '/assets/instagram.svg',
+  Twitch: '/assets/twitch.svg',
+};
 
 const STACKED_GAP = 10;
 const SIDE_BY_SIDE_GAP = 15;
@@ -28,13 +47,14 @@ export default function Game() {
   const [isRunning, setIsRunning] = useState(false);
   const [framesSinceLastObstacle, setFramesSinceLastObstacle] = useState(0);
 
-  const [difficulty, setDifficulty] = useState('medium');
   const [showDifficultyScreen, setShowDifficultyScreen] = useState(true);
   const [gameParams, setGameParams] = useState(DIFFICULTY_SETTINGS.medium);
+  const [bgOffset, setBgOffset] = useState(0);
 
   const gameAreaRef = useRef(null);
   const gameLoopRef = useRef(null);
   const nextObstacleIntervalRef = useRef(0);
+  const lastObstacleTypeRef = useRef(null);
 
   const gameWidth = 600;
   const gameHeight = 300;
@@ -44,6 +64,7 @@ export default function Game() {
     setPlayerVelY(0);
     setObstacles([]);
     setScore(0);
+    setBgOffset(0);
     setFramesSinceLastObstacle(0);
     if (gameParams) {
         nextObstacleIntervalRef.current = Math.floor(Math.random() * (gameParams.maxInterval - gameParams.minInterval + 1)) + gameParams.minInterval;
@@ -62,7 +83,6 @@ export default function Game() {
 
   const selectDifficultyAndStart = useCallback((selectedDifficultyKey) => {
     const selectedParams = DIFFICULTY_SETTINGS[selectedDifficultyKey];
-    setDifficulty(selectedDifficultyKey);
     setShowDifficultyScreen(false);
     startGameLogic(selectedParams);
   }, [startGameLogic]);
@@ -104,6 +124,7 @@ export default function Game() {
   useEffect(() => {
     if (isRunning && !gameOver) {
       gameLoopRef.current = requestAnimationFrame(() => {
+        setBgOffset(prev => (prev - gameParams.speed * 0.5) % gameWidth);
         let newPlayerVelY = playerVelY + GRAVITY;
         let newPlayerY = playerPos.y + newPlayerVelY;
 
@@ -124,8 +145,18 @@ export default function Game() {
           const formationTypeRoll = Math.random();
           let obstaclesThisSpawn = []; // Changed from newObstacle to an array
           const baseObstacleY = gameHeight - OBSTACLE_HEIGHT;
-          const iconType1 = SOCIAL_MEDIA_ICONS[Math.floor(Math.random() * SOCIAL_MEDIA_ICONS.length)];
-          const iconType2 = SOCIAL_MEDIA_ICONS[Math.floor(Math.random() * SOCIAL_MEDIA_ICONS.length)];
+
+          const getRandomIcon = (exclude) => {
+            let icon = SOCIAL_MEDIA_ICONS[Math.floor(Math.random() * SOCIAL_MEDIA_ICONS.length)];
+            while (icon === exclude) {
+              icon = SOCIAL_MEDIA_ICONS[Math.floor(Math.random() * SOCIAL_MEDIA_ICONS.length)];
+            }
+            return icon;
+          };
+
+          const iconType1 = getRandomIcon(lastObstacleTypeRef.current);
+          const iconType2 = getRandomIcon(iconType1);
+          lastObstacleTypeRef.current = iconType1;
 
           // Formation logic (constants STACKED_GAP, SIDE_BY_SIDE_GAP are already defined)
           if (formationTypeRoll < 0.5 || gameParams.speed < 3) { // ~50% chance for single, or always single if speed is very low (e.g., easy mode)
@@ -367,35 +398,63 @@ export default function Game() {
             overflow: 'hidden',
             cursor: 'pointer',
             userSelect: 'none',
+            backgroundImage: `url(${skyImage})`,
+            backgroundSize: 'cover',
+            backgroundPositionX: `${bgOffset}px`,
         }}
         onClick={jump}
         tabIndex={0}
     >
-      <div style={{
-        position: 'absolute',
-        left: `${playerPos.x}px`,
-        top: `${playerPos.y}px`,
-        width: `${PLAYER_WIDTH}px`,
-        height: `${PLAYER_HEIGHT}px`,
-        backgroundColor: 'deepskyblue',
-      }}></div>
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '200%',
+          height: '100%',
+          backgroundImage: `url(${cloudImage})`,
+          backgroundRepeat: 'repeat-x',
+          backgroundPositionX: `${bgOffset * 1.5}px`,
+          pointerEvents: 'none',
+          opacity: 0.8,
+        }}
+      />
+      <img
+        src={pubgPlayerImage}
+        alt="player"
+        style={{
+          position: 'absolute',
+          left: `${playerPos.x}px`,
+          top: `${playerPos.y}px`,
+          width: `${PLAYER_WIDTH}px`,
+          height: `${PLAYER_HEIGHT}px`,
+          imageRendering: 'pixelated',
+        }}
+      />
 
       {obstacles.map(obstacle => (
-        <div key={obstacle.id} style={{
-          position: 'absolute',
-          left: `${obstacle.x}px`,
-          top: `${obstacle.y}px`,
-          width: `${OBSTACLE_WIDTH}px`,
-          height: `${OBSTACLE_HEIGHT}px`,
-          backgroundColor: obstacle.type === 'YouTube' ? 'red' : obstacle.type === 'TikTok' ? '#00f2ea' : obstacle.type === 'Insta' ? '#C13584' : 'blue',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          fontSize: '10px',
-          color: 'white',
-          borderRadius: '4px',
-        }}>
-          {obstacle.type}
+        <div
+          key={obstacle.id}
+          style={{
+            position: 'absolute',
+            left: `${obstacle.x}px`,
+            top: `${obstacle.y}px`,
+            width: `${OBSTACLE_WIDTH}px`,
+            height: `${OBSTACLE_HEIGHT}px`,
+            backgroundColor: SOCIAL_MEDIA_COLORS[obstacle.type],
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            fontSize: '10px',
+            color: 'white',
+            borderRadius: '4px',
+          }}
+        >
+          <img
+            src={SOCIAL_MEDIA_IMAGES[obstacle.type]}
+            alt={obstacle.type}
+            style={{ width: '60%', height: '60%' }}
+          />
         </div>
       ))}
 
