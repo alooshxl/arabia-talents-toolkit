@@ -28,28 +28,39 @@ const AIYTSummarizer = () => {
     }
   };
 
+  const fetchJson = async (url, failMsg) => {
+    const res = await fetch(url);
+    const text = await res.text();
+    const isJson = res.headers.get('content-type')?.includes('application/json');
+    let data;
+    if (isJson) {
+      try { data = JSON.parse(text); } catch { /* ignore */ }
+    }
+    if (!data) {
+      throw new Error(`${failMsg}: ${text.slice(0, 100)}`);
+    }
+    if (!res.ok) {
+      throw new Error(data.error || failMsg);
+    }
+    return data;
+  };
+
   const onSubmit = async ({ videoUrl }) => {
     const videoId = getVideoId(videoUrl);
     if (!videoId) { setError('Invalid URL'); return; }
     if (!youtubeApiKey || !geminiApiKey) { setError('API keys required'); return; }
     setLoading(true); setError(''); setResult(null); setVideoInfo(null); setTranscript('');
     try {
-      const infoRes = await fetch(`/api/video-info?videoId=${videoId}&apiKey=${youtubeApiKey}`);
-      const infoText = await infoRes.text();
-      let infoData;
-      try { infoData = JSON.parse(infoText); } catch {
-        throw new Error('Video info response was not valid JSON');
-      }
-      if (!infoRes.ok) throw new Error(infoData.error || 'Video info error');
+      const infoData = await fetchJson(
+        `/api/video-info?videoId=${videoId}&apiKey=${youtubeApiKey}`,
+        'Failed to fetch video info'
+      );
       setVideoInfo(infoData);
 
-      const trRes = await fetch(`/api/transcript?videoId=${videoId}&apiKey=${youtubeApiKey}`);
-      const trText = await trRes.text();
-      let trData;
-      try { trData = JSON.parse(trText); } catch {
-        throw new Error('Transcript response was not valid JSON');
-      }
-      if (!trRes.ok) throw new Error(trData.error || 'Transcript error');
+      const trData = await fetchJson(
+        `/api/transcript?videoId=${videoId}&apiKey=${youtubeApiKey}`,
+        'Failed to fetch transcript'
+      );
       const plain = trData.transcript.map(t => t.text).join(' ');
       setTranscript(plain);
 
