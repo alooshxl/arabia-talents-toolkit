@@ -15,9 +15,7 @@ export const AppProvider = ({ children }) => {
   const [geminiApiKey, setGeminiApiKeyState] = useState(localStorage.getItem('gemini-api-key') || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [currentTheme, setCurrentTheme] = useState(
-    localStorage.getItem('theme') || 'light'
-  );
+  const [currentTheme, setCurrentTheme] = useState('light');
 
   const updateApiKey = (key) => {
     setApiKey(key);
@@ -47,10 +45,7 @@ export const AppProvider = ({ children }) => {
   // Initialize theme on load
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') || 'light';
-    setCurrentTheme(savedTheme);
-    if (savedTheme !== 'light') {
-      document.documentElement.classList.add(savedTheme);
-    }
+    changeTheme(savedTheme);
   }, []);
 
   const value = {
