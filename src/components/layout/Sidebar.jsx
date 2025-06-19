@@ -41,6 +41,11 @@ export default function Sidebar() {
       path: '/tools/search-tool',
       icon: <Search size={20} />
     },
+    {
+      name: 'AI YT Summarizer',
+      path: '/tools/ai-yt-summarizer',
+      icon: <Film size={20} />
+    },
     // Lookalike Finder removed from navItems
     {
       name: 'Trending Checker',
