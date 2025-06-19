@@ -57,7 +57,12 @@ export default function Sidebar() {
       name: 'PUBGMini', // Renamed
       path: '/#pubgmini-game-section',
       icon: <Gamepad2 size={20} /> // Icon remains
-    }
+    },
+    {
+      name: 'WinnerRunner',
+      path: '/winner-runner',
+      icon: <Gamepad2 size={20} />
+    },
     // Removed Sponsored Content Checker item:
     // {
     //   title: "Sponsored Content Checker",
