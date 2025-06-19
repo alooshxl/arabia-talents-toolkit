@@ -35,12 +35,20 @@ const AIYTSummarizer = () => {
     setLoading(true); setError(''); setResult(null); setVideoInfo(null); setTranscript('');
     try {
       const infoRes = await fetch(`/api/video-info?videoId=${videoId}&apiKey=${youtubeApiKey}`);
-      const infoData = await infoRes.json();
+      const infoText = await infoRes.text();
+      let infoData;
+      try { infoData = JSON.parse(infoText); } catch {
+        throw new Error('Video info response was not valid JSON');
+      }
       if (!infoRes.ok) throw new Error(infoData.error || 'Video info error');
       setVideoInfo(infoData);
 
       const trRes = await fetch(`/api/transcript?videoId=${videoId}&apiKey=${youtubeApiKey}`);
-      const trData = await trRes.json();
+      const trText = await trRes.text();
+      let trData;
+      try { trData = JSON.parse(trText); } catch {
+        throw new Error('Transcript response was not valid JSON');
+      }
       if (!trRes.ok) throw new Error(trData.error || 'Transcript error');
       const plain = trData.transcript.map(t => t.text).join(' ');
       setTranscript(plain);
@@ -48,7 +56,13 @@ const AIYTSummarizer = () => {
       const prompt = `Summarize the following Arabic transcript. Provide:\n1. Full summary in English\n2. Full summary in Arabic\n3. 5 to 7 key points with timestamps.\nReturn JSON as {summary_en, summary_ar, points:[{time,text}]}.\nTranscript:\n${trData.transcript.map(e=>e.start+" "+e.text).join("\n")}`;
       const resp = await geminiApiService.generateContent(geminiApiKey, prompt, `yt_sum_${videoId}`);
       const clean = resp.replace(/```json|```/g, '').trim();
-      setResult(JSON.parse(clean));
+      let parsed;
+      try { parsed = JSON.parse(clean); }
+      catch (err) {
+        console.error('Gemini JSON parse error:', err, 'Raw response:', clean);
+        throw new Error('Gemini did not return valid JSON.');
+      }
+      setResult(parsed);
     } catch (e) {
       setError(e.message);
     }
