@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 
 const AppContext = createContext();
 
@@ -45,7 +45,7 @@ export const AppProvider = ({ children }) => {
   };
 
   // Initialize theme on load
-  useState(() => {
+  useEffect(() => {
     const savedTheme = localStorage.getItem('theme') || 'light';
     setCurrentTheme(savedTheme);
     if (savedTheme !== 'light') {
