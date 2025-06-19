@@ -1,5 +1,23 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 
+const safeGet = (key, defaultValue = '') => {
+  if (typeof window === 'undefined') return defaultValue;
+  try {
+    return localStorage.getItem(key) || defaultValue;
+  } catch {
+    return defaultValue;
+  }
+};
+
+const safeSet = (key, value) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(key, value);
+  } catch (e) {
+    console.warn('localStorage setItem failed:', e);
+  }
+};
+
 const AppContext = createContext();
 
 export const useAppContext = () => {
@@ -11,28 +29,26 @@ export const useAppContext = () => {
 };
 
 export const AppProvider = ({ children }) => {
-  const [apiKey, setApiKey] = useState(localStorage.getItem('youtube-api-key') || '');
-  const [geminiApiKey, setGeminiApiKeyState] = useState(localStorage.getItem('gemini-api-key') || '');
+  const [apiKey, setApiKey] = useState(() => safeGet('youtube-api-key'));
+  const [geminiApiKey, setGeminiApiKeyState] = useState(() => safeGet('gemini-api-key'));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [currentTheme, setCurrentTheme] = useState('light');
 
   const updateApiKey = (key) => {
     setApiKey(key);
-    localStorage.setItem('youtube-api-key', key);
+    safeSet('youtube-api-key', key);
   };
 
   const setGeminiApiKey = (key) => {
     setGeminiApiKeyState(key);
-    localStorage.setItem('gemini-api-key', key);
+    safeSet('gemini-api-key', key);
   };
 
   const changeTheme = (themeName) => {
     setCurrentTheme(themeName);
 
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('theme', themeName);
-    }
+    safeSet('theme', themeName);
 
     if (typeof document !== 'undefined') {
       // Update document class for the new theme
@@ -61,7 +77,7 @@ export const AppProvider = ({ children }) => {
   // Initialize theme on load
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedTheme = localStorage.getItem('theme') || 'light';
+      const savedTheme = safeGet('theme', 'light');
       changeTheme(savedTheme);
     }
   }, []);

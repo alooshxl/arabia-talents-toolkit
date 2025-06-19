@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './contexts/AppContext';
 import Layout from './components/layout/Layout';
-// import ErrorBoundary from './components/utils/ErrorBoundary'; // Removed
+import ErrorBoundary from './components/utils/ErrorBoundary';
 import './App.css';
 
 // Lazy load tool components
@@ -77,7 +77,9 @@ function App() {
             } />
             <Route path="tools/arabia-comment-mapper" element={
               <Suspense fallback={<LoadingFallback />}>
-                <ArabiaCommentMapper />
+                <ErrorBoundary>
+                  <ArabiaCommentMapper />
+                </ErrorBoundary>
               </Suspense>
             } />
             {/* Lookalike Finder Route Removed */}
