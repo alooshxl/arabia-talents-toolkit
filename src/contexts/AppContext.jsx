@@ -29,23 +29,41 @@ export const AppProvider = ({ children }) => {
 
   const changeTheme = (themeName) => {
     setCurrentTheme(themeName);
-    localStorage.setItem('theme', themeName);
 
-    // Update document class for the new theme
-    const htmlElement = document.documentElement;
-    // List all theme classes that might need to be removed
-    const allThemeClasses = ['dark', 'blue', 'green', 'theme-purple', 'theme-orange', 'theme-teal', 'theme-crimson', 'theme-forest', 'theme-mono-gray'];
-    htmlElement.classList.remove(...allThemeClasses);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('theme', themeName);
+    }
 
-    if (themeName !== 'light') { // 'light' theme doesn't add a class, it relies on default styles
-      htmlElement.classList.add(themeName);
+    if (typeof document !== 'undefined') {
+      // Update document class for the new theme
+      const htmlElement = document.documentElement;
+      // List all theme classes that might need to be removed
+      const allThemeClasses = [
+        'dark',
+        'blue',
+        'green',
+        'theme-purple',
+        'theme-orange',
+        'theme-teal',
+        'theme-crimson',
+        'theme-forest',
+        'theme-mono-gray',
+      ];
+      htmlElement.classList.remove(...allThemeClasses);
+
+      if (themeName !== 'light') {
+        // 'light' theme doesn't add a class, it relies on default styles
+        htmlElement.classList.add(themeName);
+      }
     }
   };
 
   // Initialize theme on load
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    changeTheme(savedTheme);
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('theme') || 'light';
+      changeTheme(savedTheme);
+    }
   }, []);
 
   const value = {

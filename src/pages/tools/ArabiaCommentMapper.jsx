@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import youtubeApiService from '../../services/youtubeApi';
 import geminiApiService from '../../services/geminiApiService';
 import { useAppContext } from '@/contexts/AppContext';
+import ErrorBoundary from '@/components/utils/ErrorBoundary';
 import { Input } from '@/components/ui/input'; // Keep for potential future use like file upload
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -440,6 +441,7 @@ const AnalysisResultBlock = ({ analysisData }) => {
 };
 
   return (
+    <ErrorBoundary>
     <Card className="w-full max-w-4xl mx-auto my-8">
       <CardHeader className="text-center">
         <CardTitle className="text-3xl font-bold">Arabia Comment Mapper</CardTitle>
@@ -560,6 +562,7 @@ const AnalysisResultBlock = ({ analysisData }) => {
         )}
       </CardContent>
     </Card>
+    </ErrorBoundary>
   );
 };
 
