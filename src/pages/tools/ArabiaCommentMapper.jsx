@@ -185,34 +185,6 @@ const ArabiaCommentMapper = () => {
     }
   }, [videoUrls, commentsData, selectedVideoFilter]); // Removed geminiApiKey,
 
-  const handleGeminiDetectionClick = useCallback(async () => {
-    if (!commentsData || commentsData.length === 0) return;
-    if (!geminiApiKey) {
-      setError('Gemini API key is not set.');
-      return;
-    }
-    setIsGeminiLoading(true);
-    let updated = JSON.parse(JSON.stringify(commentsData));
-    for (const video of updated) {
-      for (const comment of video.comments) {
-        if (comment.geminiCountry) continue;
-        try {
-          const prompt = `Based on slang, language, emojis, and context, which Arab country is this comment most likely from? Just return the country name.\nComment: "${comment.text}"`;
-          const cacheKey = `origin_${hashString(comment.text)}`;
-          const country = await geminiApiService.generateContent(geminiApiKey, prompt, cacheKey);
-          comment.geminiCountry = country.trim() || 'Unknown';
-        } catch (err) {
-          console.error('Gemini detection error:', err);
-          comment.geminiCountry = 'Error (Gemini)';
-        }
-      }
-    }
-    setCommentsData(updated);
-    const results = processGeminiData(updated, selectedVideoFilter);
-    setGeminiResults(results);
-    setIsGeminiLoading(false);
-  }, [commentsData, geminiApiKey, selectedVideoFilter, processGeminiData]);
-
   const processAndAggregateData = useCallback((currentData, filterId, countryField = 'youtubeCountry') => {
     const emptyResult = {
       title: filterId === 'all' ? 'All Videos' : (currentData.find(v => v.videoId === filterId)?.title || 'Selected Video'),
@@ -253,6 +225,34 @@ const ArabiaCommentMapper = () => {
   const processGeminiData = useCallback((currentData, filterId) => {
     return processAndAggregateData(currentData, filterId, 'geminiCountry');
   }, [processAndAggregateData]);
+  const handleGeminiDetectionClick = useCallback(async () => {
+    if (!commentsData || commentsData.length === 0) return;
+    if (!geminiApiKey) {
+      setError('Gemini API key is not set.');
+      return;
+    }
+    setIsGeminiLoading(true);
+    let updated = JSON.parse(JSON.stringify(commentsData));
+    for (const video of updated) {
+      for (const comment of video.comments) {
+        if (comment.geminiCountry) continue;
+        try {
+          const prompt = `Based on slang, language, emojis, and context, which Arab country is this comment most likely from? Just return the country name.\nComment: "${comment.text}"`;
+          const cacheKey = `origin_${hashString(comment.text)}`;
+          const country = await geminiApiService.generateContent(geminiApiKey, prompt, cacheKey);
+          comment.geminiCountry = country.trim() || 'Unknown';
+        } catch (err) {
+          console.error('Gemini detection error:', err);
+          comment.geminiCountry = 'Error (Gemini)';
+        }
+      }
+    }
+    setCommentsData(updated);
+    const results = processGeminiData(updated, selectedVideoFilter);
+    setGeminiResults(results);
+    setIsGeminiLoading(false);
+  }, [commentsData, geminiApiKey, selectedVideoFilter, processGeminiData]);
+
 
 
   // Refactored performSingleAggregation for global country analysis
