@@ -1,4 +1,22 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
+
+const safeGet = (key, defaultValue = '') => {
+  if (typeof window === 'undefined') return defaultValue;
+  try {
+    return localStorage.getItem(key) || defaultValue;
+  } catch {
+    return defaultValue;
+  }
+};
+
+const safeSet = (key, value) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(key, value);
+  } catch (e) {
+    console.warn('localStorage setItem failed:', e);
+  }
+};
 
 const AppContext = createContext();
 
@@ -11,45 +29,56 @@ export const useAppContext = () => {
 };
 
 export const AppProvider = ({ children }) => {
-  const [apiKey, setApiKey] = useState(localStorage.getItem('youtube-api-key') || '');
-  const [geminiApiKey, setGeminiApiKeyState] = useState(localStorage.getItem('gemini-api-key') || '');
+  const [apiKey, setApiKey] = useState(() => safeGet('youtube-api-key'));
+  const [geminiApiKey, setGeminiApiKeyState] = useState(() => safeGet('gemini-api-key'));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [currentTheme, setCurrentTheme] = useState(
-    localStorage.getItem('theme') || 'light'
-  );
+  const [currentTheme, setCurrentTheme] = useState('light');
 
   const updateApiKey = (key) => {
     setApiKey(key);
-    localStorage.setItem('youtube-api-key', key);
+    safeSet('youtube-api-key', key);
   };
 
   const setGeminiApiKey = (key) => {
     setGeminiApiKeyState(key);
-    localStorage.setItem('gemini-api-key', key);
+    safeSet('gemini-api-key', key);
   };
 
   const changeTheme = (themeName) => {
     setCurrentTheme(themeName);
-    localStorage.setItem('theme', themeName);
 
-    // Update document class for the new theme
-    const htmlElement = document.documentElement;
-    // List all theme classes that might need to be removed
-    const allThemeClasses = ['dark', 'blue', 'green', 'theme-purple', 'theme-orange', 'theme-teal', 'theme-crimson', 'theme-forest', 'theme-mono-gray'];
-    htmlElement.classList.remove(...allThemeClasses);
+    safeSet('theme', themeName);
 
-    if (themeName !== 'light') { // 'light' theme doesn't add a class, it relies on default styles
-      htmlElement.classList.add(themeName);
+    if (typeof document !== 'undefined') {
+      // Update document class for the new theme
+      const htmlElement = document.documentElement;
+      // List all theme classes that might need to be removed
+      const allThemeClasses = [
+        'dark',
+        'blue',
+        'green',
+        'theme-purple',
+        'theme-orange',
+        'theme-teal',
+        'theme-crimson',
+        'theme-forest',
+        'theme-mono-gray',
+      ];
+      htmlElement.classList.remove(...allThemeClasses);
+
+      if (themeName !== 'light') {
+        // 'light' theme doesn't add a class, it relies on default styles
+        htmlElement.classList.add(themeName);
+      }
     }
   };
 
   // Initialize theme on load
-  useState(() => {
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    setCurrentTheme(savedTheme);
-    if (savedTheme !== 'light') {
-      document.documentElement.classList.add(savedTheme);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedTheme = safeGet('theme', 'light');
+      changeTheme(savedTheme);
     }
   }, []);
 

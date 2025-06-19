@@ -1,6 +1,8 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import youtubeApiService from '../../services/youtubeApi';
-// import geminiApiService from '../../services/geminiApiService'; // Removed
+import geminiApiService from '../../services/geminiApiService';
+import { useAppContext } from '@/contexts/AppContext';
+import ErrorBoundary from '@/components/utils/ErrorBoundary';
 import { Input } from '@/components/ui/input'; // Keep for potential future use like file upload
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,6 +43,17 @@ const countryDetails = {
 
 const getCountryFlag = (countryName) => countryDetails[countryName]?.flag || '🏳️';
 
+// Simple hash for caching Gemini responses per comment
+const hashString = (str) => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash |= 0;
+  }
+  return Math.abs(hash).toString();
+};
+
 // Function to parse the Gemini batch response - REMOVED
 // const parseGeminiBatchResponse = (responseText) => { ... };
 
@@ -56,6 +69,10 @@ const ArabiaCommentMapper = () => {
 
   const [processedResults, setProcessedResults] = useState(null); // Simplified
   const [selectedVideoFilter, setSelectedVideoFilter] = useState('all');
+  const [geminiResults, setGeminiResults] = useState(null);
+  const [isGeminiLoading, setIsGeminiLoading] = useState(false);
+
+  const { geminiApiKey } = useAppContext();
 
   const handleAnalyzeClick = useCallback(async () => {
     setIsLoading(true);
@@ -168,7 +185,7 @@ const ArabiaCommentMapper = () => {
     }
   }, [videoUrls, commentsData, selectedVideoFilter]); // Removed geminiApiKey,
 
-  const processAndAggregateData = useCallback((currentData, filterId) => {
+  const processAndAggregateData = useCallback((currentData, filterId, countryField = 'youtubeCountry') => {
     const emptyResult = {
       title: filterId === 'all' ? 'All Videos' : (currentData.find(v => v.videoId === filterId)?.title || 'Selected Video'),
       chartData: [],
@@ -200,10 +217,42 @@ const ArabiaCommentMapper = () => {
         return { ...emptyResult, title: currentTitle };
     }
 
-    // Call performSingleAggregation, which is now the main aggregation logic
-    return performSingleAggregation(commentsToProcess, 'youtubeCountry', currentTitle, commentsToProcess.length);
+    // Call performSingleAggregation for the desired country field
+    return performSingleAggregation(commentsToProcess, countryField, currentTitle, commentsToProcess.length);
 
   }, []);
+
+  const processGeminiData = useCallback((currentData, filterId) => {
+    return processAndAggregateData(currentData, filterId, 'geminiCountry');
+  }, [processAndAggregateData]);
+  const handleGeminiDetectionClick = useCallback(async () => {
+    if (!commentsData || commentsData.length === 0) return;
+    if (!geminiApiKey) {
+      setError('Gemini API key is not set.');
+      return;
+    }
+    setIsGeminiLoading(true);
+    let updated = JSON.parse(JSON.stringify(commentsData));
+    for (const video of updated) {
+      for (const comment of video.comments) {
+        if (comment.geminiCountry) continue;
+        try {
+          const prompt = `Based on slang, language, emojis, and context, which Arab country is this comment most likely from? Just return the country name.\nComment: "${comment.text}"`;
+          const cacheKey = `origin_${hashString(comment.text)}`;
+          const country = await geminiApiService.generateContent(geminiApiKey, prompt, cacheKey);
+          comment.geminiCountry = country.trim() || 'Unknown';
+        } catch (err) {
+          console.error('Gemini detection error:', err);
+          comment.geminiCountry = 'Error (Gemini)';
+        }
+      }
+    }
+    setCommentsData(updated);
+    const results = processGeminiData(updated, selectedVideoFilter);
+    setGeminiResults(results);
+    setIsGeminiLoading(false);
+  }, [commentsData, geminiApiKey, selectedVideoFilter, processGeminiData]);
+
 
 
   // Refactored performSingleAggregation for global country analysis
@@ -288,10 +337,15 @@ const ArabiaCommentMapper = () => {
 
 
   useEffect(() => {
-    // Simplified call to processAndAggregateData
     const results = processAndAggregateData(commentsData, selectedVideoFilter);
     setProcessedResults(results);
-  }, [commentsData, selectedVideoFilter, processAndAggregateData]); // Removed Gemini-related dependencies
+
+    const hasGemini = commentsData.some(v => v.comments.some(c => c.geminiCountry));
+    if (hasGemini) {
+      const gResults = processGeminiData(commentsData, selectedVideoFilter);
+      setGeminiResults(gResults);
+    }
+  }, [commentsData, selectedVideoFilter, processAndAggregateData, processGeminiData]);
 
 
 // Internal component to display a single set of analysis results
@@ -387,6 +441,7 @@ const AnalysisResultBlock = ({ analysisData }) => {
 };
 
   return (
+    <ErrorBoundary>
     <Card className="w-full max-w-4xl mx-auto my-8">
       <CardHeader className="text-center">
         <CardTitle className="text-3xl font-bold">Arabia Comment Mapper</CardTitle>
@@ -471,6 +526,19 @@ const AnalysisResultBlock = ({ analysisData }) => {
           </Card>
         )}
 
+        {geminiResults && !isGeminiLoading && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="text-2xl text-center mb-4">
+                Gemini Detection Results for: <span className="text-primary">{geminiResults.title}</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              <AnalysisResultBlock analysisData={geminiResults} />
+            </CardContent>
+          </Card>
+        )}
+
         {commentsData.length > 0 && !isLoading && (
           <Card className="mt-6">
             <CardHeader>
@@ -485,10 +553,16 @@ const AnalysisResultBlock = ({ analysisData }) => {
                 placeholder="Raw JSON data of comments..."
               />
             </CardContent>
+            <CardFooter>
+              <Button className="w-full" onClick={handleGeminiDetectionClick} disabled={isGeminiLoading}>
+                {isGeminiLoading ? 'Detecting...' : 'Detect Comment Origin by Gemini'}
+              </Button>
+            </CardFooter>
           </Card>
         )}
       </CardContent>
     </Card>
+    </ErrorBoundary>
   );
 };
 
