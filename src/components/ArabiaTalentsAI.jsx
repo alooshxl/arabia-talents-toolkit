@@ -29,19 +29,31 @@ export default function ArabiaTalentsAI() {
   const sendMessage = async () => {
     const trimmed = input.trim();
     if (!trimmed) return;
+
     const userMsg = { role: 'user', content: trimmed };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     setLoading(true);
+    const isArabic = /[\u0600-\u06FF]/.test(trimmed);
+    const systemPrompt = isArabic
+      ? 'Reply only in Arabic.'
+      : 'Reply only in English.';
+
     try {
-      const conversation = [...messages, userMsg]
-        .map(m => `${m.role === 'user' ? 'User' : 'AI'}: ${m.content}`)
+      const conversation = [
+        { role: 'system', content: systemPrompt },
+        ...messages,
+        userMsg,
+      ]
+        .map(m => `${m.role === 'user' ? 'User' : m.role === 'system' ? 'System' : 'AI'}: ${m.content}`)
         .join('\n') + '\nAI:';
+
       const reply = await geminiApiService.generateContent(
         geminiApiKey,
         conversation,
         `chat_${Date.now()}`
       );
+
       setMessages(prev => [...prev, { role: 'ai', content: reply }]);
     } catch (err) {
       setMessages(prev => [...prev, { role: 'ai', content: `Error: ${err.message}` }]);

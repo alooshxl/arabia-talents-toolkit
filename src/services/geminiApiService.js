@@ -1,7 +1,7 @@
 class GeminiApiService {
   constructor() {
-    // Model can be parameterized if needed in the future e.g. gemini-1.5-pro-latest
-    this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent';
+    // Model can be parameterized if needed in the future
+    this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
     this.cache = {};
     this.cacheDuration = 60 * 60 * 1000; // 1 hour
   }
