@@ -56,34 +56,74 @@ export default function FloatingBackground() {
       ...icon,
       id: index,
       easter: index === hiddenIndex,
+      removing: false,
       style: {
-        top: `${Math.random() * 90}vh`,
-        left: `${Math.random() * 90}vw`,
-        '--x': `${Math.random() * 40 - 20}vw`,
-        '--y': `${Math.random() * 40 - 20}vh`,
-        animationDuration: `${30 + Math.random() * 20}s`,
-        animationDelay: `${-Math.random() * 20}s`,
+        top: `${Math.random() * 100}vh`,
+        left: `${Math.random() * 100}vw`,
+        '--x': `${50 - Math.random() * 100}vw`,
+        '--y': `${50 - Math.random() * 100}vh`,
+        '--duration': `${40 + Math.random() * 30}s`,
+        '--scale': `${0.5 + Math.random() * 1.5}`,
+        '--size': `${20 + Math.random() * 40}px`,
+        '--opacity': `${0.3 + Math.random() * 0.5}`,
+        zIndex: Math.floor(Math.random() * 5),
+        animationDelay: `${-Math.random() * 40}s`,
       },
     }));
     setItems(newItems);
   }, [location.pathname]);
 
+  const removeItem = (id) =>
+    setItems((prev) => prev.filter((i) => i.id !== id));
+
+  const handleIteration = (id) => {
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== id || item.removing) return item;
+        const top =
+          (parseFloat(item.style.top) +
+            parseFloat(item.style['--y']) +
+            100) % 100;
+        const left =
+          (parseFloat(item.style.left) +
+            parseFloat(item.style['--x']) +
+            100) % 100;
+        return {
+          ...item,
+          style: {
+            ...item.style,
+            top: `${top}vh`,
+            left: `${left}vw`,
+            '--x': `${50 - Math.random() * 100}vw`,
+            '--y': `${50 - Math.random() * 100}vh`,
+          },
+        };
+      })
+    );
+  };
+
   const handleClick = (id, easter) => {
     if (!isHome) return;
-    setItems((prev) => prev.filter((item) => item.id !== id));
+    setItems((prev) =>
+      prev.map((i) => (i.id === id ? { ...i, removing: true } : i))
+    );
     if (easter) {
       alert('Hi what are you doing?? stop playing around and do your work!!');
     }
   };
 
   return (
-    <div className="floating-icons-container pointer-events-none">
+    <div className="floating-icons-container">
       {items.map((item) => {
         const commonProps = {
           key: item.id,
           style: item.style,
-          className: `floating-icon ${isHome ? 'home-clickable' : ''}`,
+          className: `floating-icon ${
+            isHome ? 'home-clickable' : ''
+          } ${item.removing ? 'exit' : ''}`,
           onClick: () => handleClick(item.id, item.easter),
+          onAnimationIteration: () => handleIteration(item.id),
+          onAnimationEnd: () => item.removing && removeItem(item.id),
         };
         return item.type === 'img' ? (
           <img {...commonProps} src={item.src} alt="" />
@@ -94,3 +134,4 @@ export default function FloatingBackground() {
     </div>
   );
 }
+
