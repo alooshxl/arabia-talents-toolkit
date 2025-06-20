@@ -1,0 +1,31 @@
+.floating-icons-container {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.floating-icon {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  opacity: 0.2;
+  animation-name: float;
+  animation-iteration-count: infinite;
+  animation-timing-function: linear;
+  animation-direction: alternate;
+}
+
+.home-clickable {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+@keyframes float {
+  from {
+    transform: translate(0, 0);
+  }
+  to {
+    transform: translate(var(--x), var(--y));
+  }
+}
