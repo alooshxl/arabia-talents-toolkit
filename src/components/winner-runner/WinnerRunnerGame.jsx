@@ -27,8 +27,9 @@ export default function WinnerRunnerGame() {
   const [highScore, setHighScore] = useState(() => Number(localStorage.getItem('wr_high')) || 0);
   const [gameOver, setGameOver] = useState(false);
 
+  // Setup three.js scene only when a difficulty is chosen
   useEffect(() => {
-    if (!mountRef.current) return;
+    if (!mountRef.current || !difficulty) return;
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, mountRef.current.clientWidth / mountRef.current.clientHeight, 0.1, 100);
@@ -136,8 +137,8 @@ export default function WinnerRunnerGame() {
 
 
   const startGame = (level) => {
-    obstaclesRef.current.forEach(o => o.parent.remove(o));
-    helmetsRef.current.forEach(h => h.parent.remove(h));
+    obstaclesRef.current.forEach(o => o.parent?.remove(o));
+    helmetsRef.current.forEach(h => h.parent?.remove(h));
     obstaclesRef.current = [];
     helmetsRef.current = [];
     setScore(0);
