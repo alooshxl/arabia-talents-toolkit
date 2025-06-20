@@ -34,7 +34,6 @@ export default function ArabiaTalentsAI() {
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     setLoading(true);
-
     const isArabic = /[\u0600-\u06FF]/.test(trimmed);
     const systemPrompt = isArabic
       ? 'Reply only in Arabic.'
