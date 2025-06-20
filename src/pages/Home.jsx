@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import Game from '@/components/game/Game';
+import HomepageVehicleDrift from '@/components/home/HomepageVehicleDrift';
 
 export default function Home() {
   const tools = [
@@ -93,9 +94,10 @@ export default function Home() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {tools.map((tool) => (
-          <Card key={tool.path || tool.href} className="overflow-hidden">
+      <div className="relative">
+        <div id="home-tools-grid" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {tools.map((tool) => (
+            <Card key={tool.path || tool.href} className="overflow-hidden">
             <CardHeader className="pb-2">
               <div className={`w-12 h-12 rounded-lg flex items-center justify-center mb-2 ${tool.color}`}>
                 {tool.icon}
@@ -112,6 +114,8 @@ export default function Home() {
             </CardFooter>
           </Card>
         ))}
+        </div>
+        <HomepageVehicleDrift />
       </div>
 
       <div id="pubgmini-game-section" className="mt-12 text-center">

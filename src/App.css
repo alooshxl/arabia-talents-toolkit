@@ -397,3 +397,5 @@
     @apply bg-background text-foreground;
   }
 }
+
+.drift-smoke { position:absolute; width:20px; height:20px; border-radius:50%; background:radial-gradient(circle, rgba(128,128,128,0.5) 0%, rgba(128,128,128,0) 70%); pointer-events:none; }
