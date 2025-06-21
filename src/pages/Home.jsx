@@ -61,7 +61,7 @@ export default function Home() {
     },
     {
       title: 'AI Video Summarizer',
-      description: 'Summarize YouTube videos with Gemini and compare to your brief.',
+      description: 'Generate summaries and key points from YouTube videos using Arabia Talents AI.',
       icon: <Clapperboard size={24} />,
       path: '/tools/ai-video-summarizer',
       color: 'bg-gray-100 dark:bg-gray-900'
