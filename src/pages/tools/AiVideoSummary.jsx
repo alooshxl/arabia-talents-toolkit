@@ -10,6 +10,23 @@ import { Youtube, Clapperboard } from 'lucide-react';
 import geminiApiService from '@/services/geminiApiService';
 import { YoutubeTranscript } from 'youtube-transcript';
 
+// Workaround for CORS when fetching YouTube pages from the browser
+async function fetchTranscriptWithProxy(url, lang) {
+  const originalFetch = window.fetch;
+  window.fetch = (input, init) => {
+    if (typeof input === 'string' && input.startsWith('https://')) {
+      const proxied = `https://api.allorigins.win/raw?url=${encodeURIComponent(input)}`;
+      return originalFetch(proxied, init);
+    }
+    return originalFetch(input, init);
+  };
+  try {
+    return await YoutubeTranscript.fetchTranscript(url, lang ? { lang } : undefined);
+  } finally {
+    window.fetch = originalFetch;
+  }
+}
+
 export default function AiVideoSummary() {
   const { geminiApiKey } = useAppContext();
   const [videoUrl, setVideoUrl] = useState('');
@@ -32,12 +49,12 @@ export default function AiVideoSummary() {
     setError('');
     setResult(null);
     try {
-      const transcript = await YoutubeTranscript.fetchTranscript(videoUrl);
+      const transcript = await fetchTranscriptWithProxy(videoUrl);
       const transcriptText = transcript.map(t => `${t.text} [${t.start}]`).join(' ');
       const langs = language === 'Both' ? ['English', 'Arabic'] : [language];
       const responses = {};
       for (const lang of langs) {
-        const prompt = `You are an assistant that summarizes YouTube videos. Using the transcript below, provide a summary in ${lang}. Include 5-7 key points with timestamps and compare the content with this brief: \"${brief}\". Return ONLY a JSON with fields summary, key_points (array of objects with time and point), and brief_comparison {matches, missing}. Transcript:\n${transcriptText}`;
+        const prompt = `You are an assistant that summarizes YouTube videos. Using the transcript below, provide a summary in ${lang}. Include 5-7 key points with timestamps and compare the content with this brief: "${brief}". Return ONLY a JSON with fields summary, key_points (array of objects with time and point), and brief_comparison {matches, missing}. Transcript:\n${transcriptText}`;
         const raw = await geminiApiService.generateContent(geminiApiKey, prompt);
         const cleaned = raw.replace(/```json|```/g, '').trim();
         responses[lang] = JSON.parse(cleaned);
