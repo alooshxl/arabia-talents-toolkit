@@ -1,10 +1,12 @@
 class MultiPlatformVideoService {
   constructor() {
     this.apifyBase = 'https://api.apify.com/v2/acts';
+    // Use actor slugs provided by the spec. They must exist in the user's
+    // Apify account otherwise the request will fail with 404.
     this.actors = {
-      tiktok: 'clockworks~free-tiktok-scraper',
-      instagram: 'apify~instagram-scraper',
-      facebook: 'apify~facebook-posts-scraper'
+      tiktok: 'tiktok-video-scraper',
+      instagram: 'instagram-reel-downloader',
+      facebook: 'facebook-video-downloader'
     };
   }
 
@@ -57,7 +59,9 @@ class MultiPlatformVideoService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input)
       });
-      if (!response.ok) throw new Error('TikTok API error');
+      if (!response.ok) {
+        throw new Error(`TikTok API error (${response.status})`);
+      }
       const [data] = await response.json();
       if (!data) throw new Error('No TikTok data returned');
       return {
@@ -84,7 +88,9 @@ class MultiPlatformVideoService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input)
       });
-      if (!response.ok) throw new Error('Instagram API error');
+      if (!response.ok) {
+        throw new Error(`Instagram API error (${response.status})`);
+      }
       const [data] = await response.json();
       if (!data) throw new Error('No Instagram data returned');
       return {
@@ -111,7 +117,9 @@ class MultiPlatformVideoService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input)
       });
-      if (!response.ok) throw new Error('Facebook API error');
+      if (!response.ok) {
+        throw new Error(`Facebook API error (${response.status})`);
+      }
       const [data] = await response.json();
       if (!data) throw new Error('No Facebook data returned');
       return {
