@@ -8,23 +8,41 @@ import { Label } from '@/components/ui/label';
 import { useAppContext } from '@/contexts/AppContext';
 import { Youtube, Clapperboard } from 'lucide-react';
 import geminiApiService from '@/services/geminiApiService';
-import { YoutubeTranscript } from 'youtube-transcript';
-
-// Workaround for CORS when fetching YouTube pages from the browser
-async function fetchTranscriptWithProxy(url, lang) {
-  const originalFetch = window.fetch;
-  window.fetch = (input, init) => {
-    if (typeof input === 'string' && input.startsWith('https://')) {
-      const proxied = `https://api.allorigins.win/raw?url=${encodeURIComponent(input)}`;
-      return originalFetch(proxied, init);
+// Fetch transcript using the public Piped API which provides CORS headers
+async function fetchTranscript(videoUrl, preferredLang) {
+  const videoId = (() => {
+    try {
+      const url = new URL(videoUrl);
+      return url.searchParams.get('v') || url.pathname.split('/').pop();
+    } catch {
+      return videoUrl;
     }
-    return originalFetch(input, init);
-  };
-  try {
-    return await YoutubeTranscript.fetchTranscript(url, lang ? { lang } : undefined);
-  } finally {
-    window.fetch = originalFetch;
+  })();
+
+  const listRes = await fetch(`https://yewtu.be/api/v1/captions/${videoId}`);
+  if (!listRes.ok) {
+    throw new Error('Transcript list not found');
   }
+  const list = await listRes.json();
+  const matchLang = preferredLang === 'Arabic' ? 'ar' : preferredLang === 'English' ? 'en' : undefined;
+  let track = list.captions.find(c => matchLang && c.languageCode.startsWith(matchLang));
+  if (!track) track = list.captions[0];
+  if (!track) {
+    throw new Error('Transcript unavailable');
+  }
+
+  const trackRes = await fetch(`https://yewtu.be${track.url}&fmt=vtt`);
+  if (!trackRes.ok) {
+    throw new Error('Failed to fetch transcript');
+  }
+  const vtt = await trackRes.text();
+  const lines = [];
+  const regex = /^(\d\d:\d\d:\d\d\.\d\d\d) --> .*\n([^\n]+)/gm;
+  let m;
+  while ((m = regex.exec(vtt)) !== null) {
+    lines.push({ time: m[1], text: m[2] });
+  }
+  return lines;
 }
 
 export default function AiVideoSummary() {
@@ -49,8 +67,8 @@ export default function AiVideoSummary() {
     setError('');
     setResult(null);
     try {
-      const transcript = await fetchTranscriptWithProxy(videoUrl);
-      const transcriptText = transcript.map(t => `${t.text} [${t.start}]`).join(' ');
+      const transcript = await fetchTranscript(videoUrl, language);
+      const transcriptText = transcript.map(t => `${t.text} [${t.time}]`).join(' ');
       const langs = language === 'Both' ? ['English', 'Arabic'] : [language];
       const responses = {};
       for (const lang of langs) {
