@@ -397,3 +397,8 @@
     @apply bg-background text-foreground;
   }
 }
+
+.arabic-text {
+  font-family: 'Cairo', 'Noto Kufi Arabic', sans-serif;
+  line-height: 1.6;
+}

@@ -8,6 +8,15 @@ import { Label } from '@/components/ui/label';
 import { useAppContext } from '@/contexts/AppContext';
 import { Youtube, Clapperboard } from 'lucide-react';
 import geminiApiService from '@/services/geminiApiService';
+
+// Helper to wrap English segments in <span dir="ltr"> for Arabic text blocks
+const wrapEnglish = (text) => {
+  if (!text) return text;
+  const parts = text.split(/([A-Za-z0-9][A-Za-z0-9\s.,:;!?']*)/);
+  return parts.map((part, i) =>
+    /^[A-Za-z0-9]/.test(part) ? <span key={i} dir="ltr">{part}</span> : part
+  );
+};
 // Fetch transcript using the public Piped API which provides CORS headers
 async function fetchTranscript(videoUrl, preferredLang) {
   const videoId = (() => {
@@ -91,7 +100,7 @@ export default function AiVideoSummary() {
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-2xl flex items-center"><Clapperboard className="mr-2" />AI Video Summarizer</CardTitle>
-          <CardDescription>Generate summaries and key points from YouTube videos using Gemini.</CardDescription>
+          <CardDescription>Generate summaries and key points from YouTube videos using Arabia Talents AI.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
@@ -117,42 +126,67 @@ export default function AiVideoSummary() {
           {error && <p className="text-red-500 text-sm">{error}</p>}
         </CardContent>
       </Card>
-      {result && Object.entries(result).map(([lang, data]) => (
-        <Card key={lang} className="mb-6">
-          <CardHeader>
-            <CardTitle>Summary ({lang})</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <h3 className="font-semibold mb-1">Summary</h3>
-              <p className="text-sm text-muted-foreground">{data.summary}</p>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-1">Key Points</h3>
-              <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                {data.key_points?.map((kp, i) => (
-                  <li key={i}>{kp.time ? `[${kp.time}] ` : ''}{kp.point}</li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-1">Brief Comparison</h3>
-              <p className="text-sm">
-                <strong>Matches:</strong>{' '}
-                {Array.isArray(data.brief_comparison?.matches)
-                  ? data.brief_comparison.matches.join(', ')
-                  : data.brief_comparison?.matches || 'None'}
-              </p>
-              <p className="text-sm">
-                <strong>Missing:</strong>{' '}
-                {Array.isArray(data.brief_comparison?.missing)
-                  ? data.brief_comparison.missing.join(', ')
-                  : data.brief_comparison?.missing || 'None'}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+      {result && Object.entries(result).map(([lang, data]) => {
+        const isArabic = lang.toLowerCase().startsWith('arabic');
+        return (
+          <Card key={lang} className="mb-6">
+            <CardHeader>
+              <CardTitle>Summary ({lang})</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <h3 className="font-semibold mb-1">Summary</h3>
+                <p
+                  className={`text-sm text-muted-foreground ${isArabic ? 'arabic-text whitespace-pre-line leading-relaxed' : ''}`}
+                  dir={isArabic ? 'rtl' : 'ltr'}
+                >
+                  {isArabic ? wrapEnglish(data.summary) : data.summary}
+                </p>
+              </div>
+              <div>
+                <h3 className="font-semibold mb-1">Key Points</h3>
+                <ul
+                  className={`list-disc list-inside space-y-1 text-sm text-muted-foreground ${isArabic ? 'arabic-text' : ''}`}
+                  dir={isArabic ? 'rtl' : 'ltr'}
+                >
+                  {data.key_points?.map((kp, i) => (
+                    <li key={i}>{isArabic ? wrapEnglish(`${kp.time ? `[${kp.time}] ` : ''}${kp.point}`) : `${kp.time ? `[${kp.time}] ` : ''}${kp.point}`}</li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <h3 className="font-semibold mb-1">Brief Comparison</h3>
+                <div className={`text-sm space-y-2 ${isArabic ? 'arabic-text' : ''}`} dir={isArabic ? 'rtl' : 'ltr'}>
+                  <div>
+                    <p className="font-semibold mb-1">Matches:</p>
+                    {Array.isArray(data.brief_comparison?.matches) && data.brief_comparison.matches.length > 0 ? (
+                      <ul className="list-disc list-inside space-y-1">
+                        {data.brief_comparison.matches.map((m, i) => (
+                          <li key={i}>{isArabic ? wrapEnglish(m) : m}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>{data.brief_comparison?.matches || 'None'}</p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-semibold mb-1">Missing:</p>
+                    {Array.isArray(data.brief_comparison?.missing) && data.brief_comparison.missing.length > 0 ? (
+                      <ul className="list-disc list-inside space-y-1">
+                        {data.brief_comparison.missing.map((m, i) => (
+                          <li key={i}>{isArabic ? wrapEnglish(m) : m}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>{data.brief_comparison?.missing || 'None'}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 }
