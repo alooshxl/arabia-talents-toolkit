@@ -7,7 +7,8 @@ import {
   Search, 
   Activity,
   MessageSquareText, // Icon for Arabia Comment Mapper
-  Gamepad2 // Added Gamepad2
+  Gamepad2, // Added Gamepad2
+  Clapperboard
   // Users icon removed as it was assumed to be only for Lookalike Finder
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -52,6 +53,11 @@ export default function Sidebar() {
       name: 'Arabia Comment Mapper',
       path: '/tools/arabia-comment-mapper',
       icon: <MessageSquareText size={20} />
+    },
+    {
+      name: 'AI Video Summarizer',
+      path: '/tools/ai-video-summarizer',
+      icon: <Clapperboard size={20} />
     },
     {
       name: 'PUBGMini', // Renamed
