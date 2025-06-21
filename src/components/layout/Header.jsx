@@ -8,9 +8,10 @@ import { Key, Home } from 'lucide-react';
 import { ThemeSwitcher } from '@/components/ui/ThemeSwitcher';
 
 export default function Header() {
-  const { apiKey, updateApiKey, geminiApiKey, setGeminiApiKey } = useAppContext();
+  const { apiKey, updateApiKey, geminiApiKey, setGeminiApiKey, apifyToken, setApifyToken } = useAppContext();
   const [tempApiKey, setTempApiKey] = useState(apiKey);
   const [tempGeminiApiKey, setTempGeminiApiKey] = useState(geminiApiKey);
+  const [tempApifyToken, setTempApifyToken] = useState(apifyToken);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   // Update temp keys if context keys change (e.g. loaded from localStorage after initial render)
@@ -22,9 +23,14 @@ export default function Header() {
     setTempGeminiApiKey(geminiApiKey);
   }, [geminiApiKey]);
 
+  useEffect(() => {
+    setTempApifyToken(apifyToken);
+  }, [apifyToken]);
+
   const handleSaveApiKeys = () => {
     updateApiKey(tempApiKey);
-    setGeminiApiKey(tempGeminiApiKey); // Save Gemini Key
+    setGeminiApiKey(tempGeminiApiKey);
+    setApifyToken(tempApifyToken);
     setIsDialogOpen(false);
   };
 
@@ -52,7 +58,7 @@ export default function Header() {
               <DialogHeader>
                 <DialogTitle>API Keys</DialogTitle>
                 <DialogDescription>
-                  Enter your YouTube Data API v3 key and Gemini API key. These are stored in your browser's localStorage.
+                  Enter your YouTube Data API v3 key, Gemini API key and Apify token. These are stored in your browser's localStorage.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
@@ -74,6 +80,16 @@ export default function Header() {
                     placeholder="Enter your Gemini API Key"
                     value={tempGeminiApiKey}
                     onChange={(e) => setTempGeminiApiKey(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="apifyToken" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Apify Token</label>
+                  <Input
+                    id="apifyToken"
+                    type="password"
+                    placeholder="Enter your Apify token"
+                    value={tempApifyToken}
+                    onChange={(e) => setTempApifyToken(e.target.value)}
                   />
                 </div>
                 <div className="flex justify-end gap-2">

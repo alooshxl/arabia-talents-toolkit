@@ -11,6 +11,7 @@ const ChannelAnalytics = lazy(() => import('./pages/tools/ChannelAnalytics'));
 const ChannelComparison = lazy(() => import('./pages/tools/ChannelComparison'));
 const BulkChannelAnalyzer = lazy(() => import('./pages/tools/BulkChannelAnalyzer'));
 const BulkVideoAnalyzer = lazy(() => import('./pages/tools/BulkVideoAnalyzer'));
+const MultiPlatformBulkVideoAnalyzer = lazy(() => import('./pages/tools/MultiPlatformBulkVideoAnalyzer'));
 const SearchTool = lazy(() => import('./pages/tools/SearchTool'));
 const TrendingChecker = lazy(() => import('./pages/tools/TrendingChecker'));
 const VideoSummarizer = lazy(() => import('./pages/tools/VideoSummarizer'));
@@ -58,6 +59,11 @@ function App() {
             <Route path="tools/bulk-video-analyzer" element={
               <Suspense fallback={<LoadingFallback />}>
                 <BulkVideoAnalyzer />
+              </Suspense>
+            } />
+            <Route path="tools/multi-platform-bulk-video-analyzer" element={
+              <Suspense fallback={<LoadingFallback />}>
+                <MultiPlatformBulkVideoAnalyzer />
               </Suspense>
             } />
             <Route path="tools/search-tool" element={

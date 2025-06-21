@@ -38,6 +38,11 @@ export default function Sidebar() {
       icon: <Film size={20} />
     },
     {
+      name: 'Multi-Platform Bulk Video Analyzer',
+      path: '/tools/multi-platform-bulk-video-analyzer',
+      icon: <Film size={20} />
+    },
+    {
       name: 'Search Tool',
       path: '/tools/search-tool',
       icon: <Search size={20} />

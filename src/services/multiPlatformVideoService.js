@@ -1,0 +1,141 @@
+class MultiPlatformVideoService {
+  constructor() {
+    this.apifyBase = 'https://api.apify.com/v2/acts';
+    // Use actor slugs provided by the spec. They must exist in the user's
+    // Apify account otherwise the request will fail with 404.
+    this.actors = {
+      tiktok: 'tiktok-video-scraper',
+      instagram: 'instagram-reel-downloader',
+      facebook: 'facebook-video-downloader'
+    };
+  }
+
+  getApifyToken() {
+    try {
+      return localStorage.getItem('apify-token') || 'apify_api_8hXuKXEo9WU8vIm333UzdeISV0migP0LyNPQ';
+    } catch {
+      return 'apify_api_8hXuKXEo9WU8vIm333UzdeISV0migP0LyNPQ';
+    }
+  }
+
+  detectPlatform(url) {
+    if (!url) return null;
+    const lower = url.toLowerCase();
+    if (lower.includes('youtube.com') || lower.includes('youtu.be')) return 'youtube';
+    if (lower.includes('tiktok.com')) return 'tiktok';
+    if (lower.includes('instagram.com')) return 'instagram';
+    if (lower.includes('facebook.com')) return 'facebook';
+    return null;
+  }
+
+  async fetchYouTubeData(url, youtubeApiService) {
+    try {
+      const videoId = youtubeApiService.extractVideoIdFromUrl
+        ? youtubeApiService.extractVideoIdFromUrl(url)
+        : null;
+      if (!videoId) throw new Error('Invalid YouTube URL');
+      const video = await youtubeApiService.getVideoDetails(videoId);
+      return {
+        username: video.snippet.channelTitle,
+        videoUrl: url,
+        views: parseInt(video.statistics.viewCount || 0),
+        likes: parseInt(video.statistics.likeCount || 0),
+        comments: parseInt(video.statistics.commentCount || 0),
+        duration: video.contentDetails.duration,
+        publishDate: video.snippet.publishedAt
+      };
+    } catch (e) {
+      return { error: e.message };
+    }
+  }
+
+  async fetchTikTokData(url) {
+    try {
+      const input = { downloadVideos: false, startUrls: [{ url }] };
+      const token = this.getApifyToken();
+      if (!token) throw new Error('Apify token not set');
+      const response = await fetch(`${this.apifyBase}/${this.actors.tiktok}/run-sync-get-dataset-items?token=${token}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input)
+      });
+      if (!response.ok) {
+        throw new Error(`TikTok API error (${response.status})`);
+      }
+      const [data] = await response.json();
+      if (!data) throw new Error('No TikTok data returned');
+      return {
+        username: data.author || data.username || data.authorName,
+        videoUrl: url,
+        views: parseInt(data.playCount || data.plays || 0),
+        likes: parseInt(data.likes || data.diggCount || 0),
+        comments: parseInt(data.comments || data.commentCount || 0),
+        duration: data.duration || '',
+        publishDate: data.createTime || data.date || data.publishedDate
+      };
+    } catch (e) {
+      return { error: e.message };
+    }
+  }
+
+  async fetchInstagramData(url) {
+    try {
+      const input = { startUrls: [{ url }] };
+      const token = this.getApifyToken();
+      if (!token) throw new Error('Apify token not set');
+      const response = await fetch(`${this.apifyBase}/${this.actors.instagram}/run-sync-get-dataset-items?token=${token}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input)
+      });
+      if (!response.ok) {
+        throw new Error(`Instagram API error (${response.status})`);
+      }
+      const [data] = await response.json();
+      if (!data) throw new Error('No Instagram data returned');
+      return {
+        username: data.author || data.username || data.ownerUsername,
+        videoUrl: url,
+        views: parseInt(data.playCount || data.plays || 0),
+        likes: parseInt(data.likes || data.likeCount || 0),
+        comments: parseInt(data.comments || data.commentCount || 0),
+        duration: data.duration || '',
+        publishDate: data.date || data.taken_at_date || data.publishedDate
+      };
+    } catch (e) {
+      return { error: e.message };
+    }
+  }
+
+  async fetchFacebookData(url) {
+    try {
+      const input = { startUrls: [{ url }], maxPosts: 1 };
+      const token = this.getApifyToken();
+      if (!token) throw new Error('Apify token not set');
+      const response = await fetch(`${this.apifyBase}/${this.actors.facebook}/run-sync-get-dataset-items?token=${token}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input)
+      });
+      if (!response.ok) {
+        throw new Error(`Facebook API error (${response.status})`);
+      }
+      const [data] = await response.json();
+      if (!data) throw new Error('No Facebook data returned');
+      return {
+        username: data.page || data.username || data.owner,
+        videoUrl: url,
+        views: parseInt(data.views || data.playCount || 0),
+        likes: parseInt(data.likes || data.likeCount || 0),
+        comments: parseInt(data.comments || data.commentCount || 0),
+        duration: data.duration || '',
+        publishDate: data.date || data.publishedDate
+      };
+    } catch (e) {
+      return { error: e.message };
+    }
+  }
+}
+
+const multiPlatformVideoService = new MultiPlatformVideoService();
+export default multiPlatformVideoService;

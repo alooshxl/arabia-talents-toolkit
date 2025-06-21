@@ -31,6 +31,7 @@ export const useAppContext = () => {
 export const AppProvider = ({ children }) => {
   const [apiKey, setApiKey] = useState(() => safeGet('youtube-api-key'));
   const [geminiApiKey, setGeminiApiKeyState] = useState(() => safeGet('gemini-api-key'));
+  const [apifyToken, setApifyTokenState] = useState(() => safeGet('apify-token', 'apify_api_8hXuKXEo9WU8vIm333UzdeISV0migP0LyNPQ'));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [currentTheme, setCurrentTheme] = useState('light');
@@ -43,6 +44,11 @@ export const AppProvider = ({ children }) => {
   const setGeminiApiKey = (key) => {
     setGeminiApiKeyState(key);
     safeSet('gemini-api-key', key);
+  };
+
+  const setApifyToken = (token) => {
+    setApifyTokenState(token);
+    safeSet('apify-token', token);
   };
 
   const changeTheme = (themeName) => {
@@ -92,7 +98,9 @@ export const AppProvider = ({ children }) => {
     currentTheme,
     changeTheme,
     geminiApiKey,
-    setGeminiApiKey
+    setGeminiApiKey,
+    apifyToken,
+    setApifyToken
   };
 
   return (
