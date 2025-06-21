@@ -46,6 +46,13 @@ export default function Home() {
       color: 'bg-red-100 dark:bg-red-900'
     },
     {
+      title: 'Multi-Platform Bulk Video Analyzer',
+      description: 'Analyze engagement metrics across YouTube, Instagram, TikTok, and Facebook using URLs',
+      icon: <Film size={24} />,
+      path: '/tools/multi-platform-bulk-video-analyzer',
+      color: 'bg-teal-100 dark:bg-teal-900'
+    },
+    {
       title: 'Search Tool',
       description: 'Search YouTube with advanced filters for country, views, upload date, and category.',
       icon: <Search size={24} />,
