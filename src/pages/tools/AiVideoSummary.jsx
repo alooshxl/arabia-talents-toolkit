@@ -137,8 +137,18 @@ export default function AiVideoSummary() {
             </div>
             <div>
               <h3 className="font-semibold mb-1">Brief Comparison</h3>
-              <p className="text-sm"><strong>Matches:</strong> {data.brief_comparison?.matches?.join(', ') || 'None'}</p>
-              <p className="text-sm"><strong>Missing:</strong> {data.brief_comparison?.missing?.join(', ') || 'None'}</p>
+              <p className="text-sm">
+                <strong>Matches:</strong>{' '}
+                {Array.isArray(data.brief_comparison?.matches)
+                  ? data.brief_comparison.matches.join(', ')
+                  : data.brief_comparison?.matches || 'None'}
+              </p>
+              <p className="text-sm">
+                <strong>Missing:</strong>{' '}
+                {Array.isArray(data.brief_comparison?.missing)
+                  ? data.brief_comparison.missing.join(', ')
+                  : data.brief_comparison?.missing || 'None'}
+              </p>
             </div>
           </CardContent>
         </Card>
