@@ -1,12 +1,19 @@
 class MultiPlatformVideoService {
   constructor() {
-    this.apifyToken = 'apify_api_8hXuKXEo9WU8vIm333UzdeISV0migP0LyNPQ';
     this.apifyBase = 'https://api.apify.com/v2/acts';
     this.actors = {
       tiktok: 'clockworks~free-tiktok-scraper',
       instagram: 'apify~instagram-scraper',
       facebook: 'apify~facebook-posts-scraper'
     };
+  }
+
+  getApifyToken() {
+    try {
+      return localStorage.getItem('apify-token') || 'apify_api_8hXuKXEo9WU8vIm333UzdeISV0migP0LyNPQ';
+    } catch {
+      return 'apify_api_8hXuKXEo9WU8vIm333UzdeISV0migP0LyNPQ';
+    }
   }
 
   detectPlatform(url) {
@@ -43,7 +50,9 @@ class MultiPlatformVideoService {
   async fetchTikTokData(url) {
     try {
       const input = { downloadVideos: false, startUrls: [{ url }] };
-      const response = await fetch(`${this.apifyBase}/${this.actors.tiktok}/run-sync-get-dataset-items?token=${this.apifyToken}`, {
+      const token = this.getApifyToken();
+      if (!token) throw new Error('Apify token not set');
+      const response = await fetch(`${this.apifyBase}/${this.actors.tiktok}/run-sync-get-dataset-items?token=${token}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input)
@@ -68,7 +77,9 @@ class MultiPlatformVideoService {
   async fetchInstagramData(url) {
     try {
       const input = { startUrls: [{ url }] };
-      const response = await fetch(`${this.apifyBase}/${this.actors.instagram}/run-sync-get-dataset-items?token=${this.apifyToken}`, {
+      const token = this.getApifyToken();
+      if (!token) throw new Error('Apify token not set');
+      const response = await fetch(`${this.apifyBase}/${this.actors.instagram}/run-sync-get-dataset-items?token=${token}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input)
@@ -93,7 +104,9 @@ class MultiPlatformVideoService {
   async fetchFacebookData(url) {
     try {
       const input = { startUrls: [{ url }], maxPosts: 1 };
-      const response = await fetch(`${this.apifyBase}/${this.actors.facebook}/run-sync-get-dataset-items?token=${this.apifyToken}`, {
+      const token = this.getApifyToken();
+      if (!token) throw new Error('Apify token not set');
+      const response = await fetch(`${this.apifyBase}/${this.actors.facebook}/run-sync-get-dataset-items?token=${token}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input)
