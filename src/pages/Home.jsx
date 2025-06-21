@@ -7,7 +7,7 @@ import {
   Search, 
   Activity,
   ArrowRight,
-
+  Clapperboard,
   MessageSquareText // Added for Arabia Comment Mapper
   // Users icon removed
 } from 'lucide-react';
@@ -58,6 +58,13 @@ export default function Home() {
       icon: <Activity size={24} />,
       path: '/tools/trending-checker',
       color: 'bg-pink-100 dark:bg-pink-900'
+    },
+    {
+      title: 'AI Video Summarizer',
+      description: 'Summarize YouTube videos with Gemini and compare to your brief.',
+      icon: <Clapperboard size={24} />,
+      path: '/tools/ai-video-summarizer',
+      color: 'bg-gray-100 dark:bg-gray-900'
     },
     {
 
